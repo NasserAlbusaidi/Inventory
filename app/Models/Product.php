@@ -14,7 +14,7 @@ class Product extends Model
         'sku',
         'name',
         'description',
-        'category',
+        'category_id',
         'image_url',
     ];
 
@@ -24,5 +24,14 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    /**
+     * Get the category that owns the product.
+     */
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 }

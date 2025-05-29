@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('order_number')->unique();
             $table->date('order_date');
             $table->date('expected_delivery_date')->nullable();
-            $table->enum('status', ['draft', 'ordered', 'partially_received', 'received', 'cancelled'])->default('draft');
+            $table->enum('status', ['draft', 'approved', 'ordered', 'partially_received', 'received', 'cancelled'])->default('draft');
             $table->decimal('total_amount', 10, 2)->default(0);
             $table->timestamps();
         });
