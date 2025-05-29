@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('sales_orders', function (Blueprint $table) {
             $table->id();
-            $table->string('order_number')->unique()->autoIncrement();
+            $table->string('order_number')->unique();
             $table->enum('channel', ['shopify', 'boutique', 'other']);
             $table->foreignId('location_id')->nullable()->constrained()->onDelete('set null');
             $table->date('order_date');

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Product;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -186,7 +186,7 @@ class ProductForm extends Component
 
     public function render()
     {
-        return view('livewire.product-form')
-               ->layout('layouts.app'); // Or components.layouts.app if you moved it
+        return view('livewire.product.product-form')
+               ->layout('components.layouts.livewire'); // Or components.layouts.app if you moved it
     }
 }
