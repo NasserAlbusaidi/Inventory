@@ -63,12 +63,15 @@ class DashboardController extends Controller
 
 
         // --- Purchase KPIs (Last 30 Days) ---
-        $totalPurchaseOrdersLast30Days = PurchaseOrder::where('status', 'Received') // Or relevant status
+        $totalPurchaseOrdersLast30Days = PurchaseOrder::where('status', 'completed') // Or relevant status
                                           ->whereBetween('order_date', [$thirtyDaysAgo, $today])
                                           ->count();
-        $totalPurchaseAmountLast30Days = PurchaseOrder::where('status', 'Received')
+
+        $totalPurchaseAmountLast30Days = PurchaseOrder::where('status', 'completed')
                                           ->whereBetween('order_date', [$thirtyDaysAgo, $today])
                                           ->sum('total_amount'); // Assuming PurchaseOrder has total_amount
+
+                                          $currentInventory = ProductVariant::count();
 
         // --- CHART DATA ---
 
@@ -178,7 +181,7 @@ class DashboardController extends Controller
             'totalProducts', 'lowStockItemsCount', 'recentActivities', 'totalInventoryValue',
             'totalRevenueLast30Days', 'totalCogsLast30Days', 'grossProfitLast30Days',
             'salesCountLast30Days', 'averageOrderValueLast30Days', 'profitMarginLast30Days',
-            'revenueChangePercentage',
+            'revenueChangePercentage', 'currentInventory',
             'totalPurchaseOrdersLast30Days', 'totalPurchaseAmountLast30Days',
             'revenueOverTimeLabels', 'revenueOverTimeData',
             'salesByChannelLabels', 'salesByChannelData',

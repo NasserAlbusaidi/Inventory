@@ -139,6 +139,15 @@
                     <p class="mt-1 text-2xl font-semibold text-gray-900">OMR {{ number_format($totalPurchaseAmountLast30Days, 2) }}</p>
                 </div>
             </div>
+             <div class="bg-white p-6 rounded-lg shadow-md flex items-start space-x-4">
+                <div class="flex-shrink-0 bg-lime-100 text-lime-600 p-3 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" /></svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">current Inventory</h3>
+                    <p class="mt-1 text-2xl font-semibold text-gray-900"> {{ number_format($currentInventory) }}</p>
+                </div>
+            </div>
         </div>
     </div>
 
