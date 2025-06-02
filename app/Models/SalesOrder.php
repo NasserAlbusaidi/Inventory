@@ -15,6 +15,7 @@ class SalesOrder extends Model
         'order_number',
         'channel',
         'location_id',
+        'price',
         'order_date',
         'customer_details',
         'total_amount',

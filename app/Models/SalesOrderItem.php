@@ -15,6 +15,7 @@ class SalesOrderItem extends Model
         'product_variant_id',
         'quantity',
         'price_per_unit',
+        'price',
     ];
 
     protected $casts = [

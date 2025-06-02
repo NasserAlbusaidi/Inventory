@@ -6,6 +6,7 @@ use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
 use App\Models\Location;
 use App\Models\ProductVariant;
+use App\Models\InventoryMovement; // <-- Ensured this is present
 use Livewire\Component;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -55,7 +56,7 @@ class SalesOrderForm extends Component
             $rules["items.{$index}.quantity"] = 'required|integer|min:1';
             $rules["items.{$index}.price_per_unit"] = 'required|numeric|min:0';
 
-            if (!empty($item['product_variant_id']) && isset($item['available_stock'])) { // Check if available_stock is set
+            if (!empty($item['product_variant_id']) && isset($item['available_stock'])) {
                 $availableStock = (int)$item['available_stock'];
                  if ($availableStock < ($item['quantity'] ?? 1) ) {
                     $rules["items.{$index}.quantity"] .= '|max:' . $availableStock;
@@ -129,7 +130,7 @@ class SalesOrderForm extends Component
             ->join('products', 'product_variants.product_id', '=', 'products.id')
             ->select(
                 'product_variants.id',
-                'product_variants.selling_price', // Ensure selling_price is selected
+                'product_variants.selling_price',
                 'product_variants.stock_quantity',
                 DB::raw('CONCAT(products.name, " - ", product_variants.variant_name, " (SKU: ", COALESCE(products.sku, "N/A"), ")") as full_name_with_variant')
             )
@@ -143,11 +144,11 @@ class SalesOrderForm extends Component
         $this->order_date = Carbon::now()->format('Y-m-d');
         $this->status = 'pending';
         $this->channel = 'boutique';
-        $this->location_id = $this->allLocations->first()->id ?? null; // Default to first location for boutique if any
+        $this->location_id = $this->allLocations->first()->id ?? null;
         $this->customer_name = '';
         $this->customer_email = '';
         $this->customer_phone = '';
-        $this->generateOrderNumber(); // Generate order number for new SO
+        $this->generateOrderNumber();
         $this->items = [];
         $this->addItem();
         $this->calculateTotalAmount();
@@ -155,7 +156,6 @@ class SalesOrderForm extends Component
 
     private function generateOrderNumber()
     {
-        // Example generation: SO-YYYYMMDD-HHMMSS-RANDOM
         $this->order_number = 'SO-' . Carbon::now()->format('YmdHis') . strtoupper(substr(uniqid(), -4));
     }
 
@@ -181,7 +181,6 @@ class SalesOrderForm extends Component
 
     public function updated($propertyName)
     {
-        // Check if an item's product_variant_id, quantity, or price_per_unit was updated
         if (preg_match('/items\.(\d+)\.(product_variant_id|quantity|price_per_unit)/', $propertyName, $matches)) {
             $index = (int)$matches[1];
             $field = $matches[2];
@@ -191,12 +190,9 @@ class SalesOrderForm extends Component
             if ($field === 'product_variant_id' && !empty($this->items[$index]['product_variant_id'])) {
                 $variant = $this->allProductVariants->find($this->items[$index]['product_variant_id']);
                 if ($variant) {
-                    // **This is the key change: Set price_per_unit from variant's selling_price**
                     $this->items[$index]['price_per_unit'] = (float)$variant->selling_price;
                     $this->items[$index]['variant_name_display'] = $variant->full_name_with_variant;
                     $this->items[$index]['available_stock'] = $variant->stock_quantity;
-
-                    // Adjust quantity if it exceeds available stock, or set to 1 if stock is available
                     if ($variant->stock_quantity <= 0) {
                         $this->items[$index]['quantity'] = 0;
                     } elseif (($this->items[$index]['quantity'] ?? 1) > $variant->stock_quantity) {
@@ -204,14 +200,13 @@ class SalesOrderForm extends Component
                     } elseif (($this->items[$index]['quantity'] ?? 0) == 0 && $variant->stock_quantity > 0) {
                          $this->items[$index]['quantity'] = 1;
                     }
-                } else { // Variant not found or deselected
+                } else {
                     $this->items[$index]['price_per_unit'] = 0.000;
                     $this->items[$index]['variant_name_display'] = 'Select Variant';
                     $this->items[$index]['available_stock'] = 0;
-                    $this->items[$index]['quantity'] = 1; // Reset quantity
+                    $this->items[$index]['quantity'] = 1;
                 }
             }
-            // Always recalculate total if any of these fields change for an item
             $this->calculateTotalAmount();
         }
 
@@ -238,21 +233,19 @@ class SalesOrderForm extends Component
 
         DB::transaction(function () {
             $isNewOrder = !($this->salesOrderInstance && $this->salesOrderInstance->exists);
+            $previousStatus = $isNewOrder ? null : $this->salesOrderInstance->getOriginal('status');
 
             if ($isNewOrder) {
                 $this->salesOrderInstance = new SalesOrder();
-                // If order_number is not auto-incremented by DB and not set yet for a new order
                 if(empty($this->salesOrderInstance->order_number) && empty($this->order_number)){
                     $this->generateOrderNumber();
                 }
                  $this->salesOrderInstance->order_number = $this->order_number;
             }
 
-            // Ensure order_number is assigned if it's from the input field and not the instance
             if(!empty($this->order_number) && $this->order_number !== $this->salesOrderInstance->order_number) {
                  $this->salesOrderInstance->order_number = $this->order_number;
             }
-
 
             $this->salesOrderInstance->channel = $this->channel;
             $this->salesOrderInstance->location_id = ($this->channel === 'boutique' && $this->location_id) ? $this->location_id : null;
@@ -274,6 +267,7 @@ class SalesOrderForm extends Component
                     'product_variant_id' => $itemData['product_variant_id'],
                     'quantity' => $itemData['quantity'],
                     'price_per_unit' => $itemData['price_per_unit'],
+                    'price' => $itemData['price_per_unit'], // <-- This was added
                 ];
 
                 $soItem = null;
@@ -292,11 +286,30 @@ class SalesOrderForm extends Component
                 $this->salesOrderInstance->items()->whereNotIn('id', $currentItemIds)->delete();
             }
 
-            // Stock deduction logic will be added here or in a service/event listener
-            // based on order status (e.g., when 'completed' or 'shipped')
-            if ($this->salesOrderInstance->status === 'completed' || $this->salesOrderInstance->status === 'shipped') {
-                // Implement stock deduction and inventory movement creation here
-                // This can be complex and should be handled carefully
+            $currentStatus = $this->salesOrderInstance->status;
+            $isStatusChangedToCompletedOrShipped = !in_array($previousStatus, ['completed', 'shipped']) && in_array($currentStatus, ['completed', 'shipped']);
+            $isNewAndCompletedOrShipped = $isNewOrder && in_array($currentStatus, ['completed', 'shipped']);
+
+            if ($isStatusChangedToCompletedOrShipped || $isNewAndCompletedOrShipped) {
+                foreach ($this->salesOrderInstance->items()->get() as $item) {
+                    $variant = ProductVariant::find($item->product_variant_id);
+                    if ($variant) {
+                        $originalVariantStock = $variant->stock_quantity;
+                        $newStockQuantity = $originalVariantStock - $item->quantity;
+                        $variant->update(['stock_quantity' => $newStockQuantity]);
+
+                        InventoryMovement::create([
+                            'product_variant_id' => $item->product_variant_id,
+                            'location_id' => $this->salesOrderInstance->location_id,
+                            'type' => 'out',
+                            'quantity' => -$item->quantity,
+                            'reason' => 'Sales Order: ' . $this->salesOrderInstance->order_number,
+                            'reference_type' => SalesOrder::class,
+                            'reference_id' => $this->salesOrderInstance->id,
+                            'user_id' => Auth::id(),
+                        ]);
+                    }
+                }
             }
 
         });

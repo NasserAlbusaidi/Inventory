@@ -15,7 +15,8 @@ class PurchaseOrder extends Model
         'supplier_id',
         'order_number',
         'order_date',
-        'expected_delivery_date',
+        // 'expected_delivery_date',
+        'receiving_location_id',
         'status',
         'total_amount',
     ];
@@ -40,5 +41,10 @@ class PurchaseOrder extends Model
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function receivingLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'receiving_location_id');
     }
 }
