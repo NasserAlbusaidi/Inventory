@@ -15,12 +15,14 @@ use App\Livewire\PurchaseOrder\PurchaseOrderList;
 use App\Livewire\PurchaseOrder\PurchaseOrderForm;
 use App\Livewire\SalesOrder\SalesOrderList;
 use App\Livewire\SalesOrder\SalesOrderForm;
+use App\Livewire\Expense\RecurringExpenseList;
+use App\Livewire\Expense\RecurringExpenseForm;
 
 // Dashboard Route
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
 // Product Form Routes
-Route::get('/products', ProductList::class)->name('products.index'); // Add this for listing
+Route::get('/products', ProductList::class)->name('products.index');
 Route::get('/products/create', ProductForm::class)->name('products.create');
 Route::get('/products/{productId}/edit', ProductForm::class)->name('products.edit');
 
@@ -45,13 +47,18 @@ Route::get('/inventory/adjustments/create', StockAdjustmentForm::class)->name('i
 // Purchase Order Management Routes
 Route::get('/purchase-orders', PurchaseOrderList::class)->name('purchase-orders.index');
 Route::get('/purchase-orders/create', PurchaseOrderForm::class)->name('purchase-orders.create');
-Route::get('/purchase-orders/{purchaseOrder}/edit', PurchaseOrderForm::class)->name('purchase-orders.edit'); // For editing/viewing
+Route::get('/purchase-orders/{purchaseOrder}/edit', PurchaseOrderForm::class)->name('purchase-orders.edit');
 Route::get('/purchase-orders/{purchaseOrder}', PurchaseOrderForm::class)->name('purchase-orders.show');
 
 // Sales Order Management Routes
 Route::get('/sales-orders', SalesOrderList::class)->name('sales-orders.index');
 Route::get('/sales-orders/create', SalesOrderForm::class)->name('sales-orders.create');
-Route::get('/sales-orders/{salesOrder}/edit', SalesOrderForm::class)->name('sales-orders.edit'); // For editing/viewing
-Route::get('/sales-orders/{salesOrder}', SalesOrderForm::class)->name('sales-orders.show'); // Can be same as edit or a dedicated view
+Route::get('/sales-orders/{salesOrder}/edit', SalesOrderForm::class)->name('sales-orders.edit');
+Route::get('/sales-orders/{salesOrder}', SalesOrderForm::class)->name('sales-orders.show');
+
+
+Route::get('/expenses', RecurringExpenseList::class)->name('expenses.index');
+Route::get('/expenses/create', RecurringExpenseForm::class)->name('expenses.create');
+Route::get('/expenses/{expense}/edit', RecurringExpenseForm::class)->name('expenses.edit');
 
 // ... (other routes)

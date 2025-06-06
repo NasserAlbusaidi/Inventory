@@ -169,7 +169,8 @@ return [
          */
         App\Providers\AppServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,     // <--- ENSURE IT'S THIS
+        App\Providers\EventServiceProvider::class,
+        App\Providers\NavigationServiceProvider::class,
         // ... any other app providers
     ])->toArray(),
 

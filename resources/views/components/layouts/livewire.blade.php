@@ -1,30 +1,24 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<!-- add dark class here when active -->
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    <title>{{ $title ?? config('app.name', 'Laravel') . ' - Inventory MS' }}</title>
-
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700&display=swap" rel="stylesheet" />
-
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    @livewireStyles
+   <!-- ... head content ... -->
+     @vite(['resources/css/app.css', 'resources/js/app.js'])
+     <style> [x-cloak] { display: none !important; } </style> {{-- good practice for alpine --}}
+      @livewireStyles
 </head>
-<body class="font-sans antialiased bg-gray-100">
-    <div class="min-h-screen">
-        @include('layouts.partials.navigation')
-
-        <main class="py-8">
-            {{ $slot }} {{-- This is where your Livewire component's view will be injected --}}
+<!-- CHANGE background and text color -->
+<body class="font-sans antialiased bg-gray-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+    <!-- Ensure your navigation also has dark: classes -->
+    <div class="min-h-screen ">
+         @include('layouts.partials.navigation')
+        <!-- Add some padding to the main container -->
+        <main class="p-4 sm:p-8">
+             {{ $slot }}
         </main>
     </div>
-
-    @livewireScripts
-    @stack('scripts') {{-- For any page-specific scripts --}}
+     @livewireScripts
+     @stack('scripts')
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>
