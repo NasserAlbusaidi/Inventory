@@ -51,4 +51,13 @@ class ProductVariant extends Model
     {
         return $this->hasMany(PurchaseOrderItem::class);
     }
+
+    /**
+     * get the the product name and variant name concatenated
+     */
+
+    public function getFullNameAttribute()
+    {
+        return $this->product->name . ' - ' . $this->variant_name;
+    }
 }

@@ -1,24 +1,39 @@
 <!DOCTYPE html>
-<!-- add dark class here when active -->
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{
+darkMode: localStorage.getItem('darkMode') || localStorage.setItem('darkMode', 'system')
+}" x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))"
+x-bind:class="{
+'dark': darkMode === 'dark' || (darkMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+}">
+
 <head>
-   <!-- ... head content ... -->
-     @vite(['resources/css/app.css', 'resources/js/app.js'])
-     <style> [x-cloak] { display: none !important; } </style> {{-- good practice for alpine --}}
-      @livewireStyles
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ $title ?? 'Inventory' }}</title>
+
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700&display=swap" rel="stylesheet" />
+
+@vite(['resources/css/app.css', 'resources/js/app.js'])
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+</style>
+@livewireStyles
 </head>
-<!-- CHANGE background and text color -->
-<body class="font-sans antialiased bg-gray-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
-    <!-- Ensure your navigation also has dark: classes -->
-    <div class="min-h-screen ">
-         @include('layouts.partials.navigation')
-        <!-- Add some padding to the main container -->
-        <main class="p-4 sm:p-8">
-             {{ $slot }}
-        </main>
-    </div>
-     @livewireScripts
-     @stack('scripts')
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<body
+class="font-sans antialiased bg-gray-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+<div class="min-h-screen">
+@include('layouts.partials.navigation')
+
+    <main class="p-4 sm:p-8">
+        {{ $slot }}
+    </main>
+</div>
+@livewireScripts
+@stack('scripts')
 </body>
+
 </html>

@@ -36,6 +36,22 @@ class PurchaseOrder extends Model
     }
 
     /**
+     * Get the location associated with the purchase order (receiving location).
+     */
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'receiving_location_id');
+    }
+
+    /**
+     * Get the Product
+      */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    /**
      * Get the items for the purchase order.
      */
     public function items(): HasMany
@@ -46,5 +62,41 @@ class PurchaseOrder extends Model
     public function receivingLocation(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'receiving_location_id');
+    }
+
+    /**
+     * Get the total amount of the purchase order.
+     */
+    public function getTotalAmountAttribute(): float
+    {
+        return $this->items->sum(function ($item) {
+            return $item->quantity * $item->cost_price_per_unit;
+        });
+    }
+    /**
+     * Get the status of the purchase order.
+     */
+    public function getStatusAttribute(): string
+    {
+        return $this->attributes['status'] ?? 'pending';
+    }
+    /**
+     * Set the status of the purchase order.
+     */
+    public function setStatusAttribute(string $value): void
+    {
+        $validStatuses = ['pending', 'received', 'cancelled'];
+        if (in_array($value, $validStatuses)) {
+            $this->attributes['status'] = $value;
+        } else {
+            throw new \InvalidArgumentException("Invalid status: $value");
+        }
+    }
+    /**
+     * Get Product Name and Variant Name concatenated
+     */
+    public function getFullNameAttribute(): string
+    {
+        return $this->supplier->name . ' - ' . $this->order_number;
     }
 }

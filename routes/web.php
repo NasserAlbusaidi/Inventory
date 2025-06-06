@@ -19,7 +19,8 @@ use App\Livewire\Expense\RecurringExpenseList;
 use App\Livewire\Expense\RecurringExpenseForm;
 
 // Dashboard Route
-Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/', DashboardController::class)->name('dashboard');
+Route::post('/dashboard', [DashboardController::class, 'updateMonthlyTarget'])->name('dashboard.update-monthly-target');
 
 // Product Form Routes
 Route::get('/products', ProductList::class)->name('products.index');

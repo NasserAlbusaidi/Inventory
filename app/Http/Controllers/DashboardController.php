@@ -2,265 +2,319 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InventoryMovement;
-use App\Models\Product;
+use App\Models\Category;
+// use App\Models\InventoryLevel; // REMOVED
+use App\Models\Location;
 use App\Models\ProductVariant;
+use App\Models\PurchaseOrder;
+use App\Models\RecurringExpense;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
-use App\Models\PurchaseOrder;
-use App\Models\Category;
-use App\Models\RecurringExpense; // Import the RecurringExpense model
-use Illuminate\View\View;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function index(): View
+    public function __invoke(Request $request)
     {
-        // --- Date Ranges ---
-        $today = Carbon::now()->endOfDay();
-        $endDate = $today->copy();
-        $startDateLast30Days = $today->copy()->subDays(29)->startOfDay();
-        $endDatePrev30Days = $startDateLast30Days->copy()->subSecond();
-        $startDatePrev30Days = $endDatePrev30Days->copy()->subDays(29)->startOfDay();
-        $thirtyDaysAgoForChart = Carbon::now()->subDays(29)->startOfDay();
+        $endDate = Carbon::now();
+        $startDate = $endDate->copy()->subDays(29)->startOfDay();
 
-        // --- Core Inventory KPIs ---
-        $totalProducts = Product::count();
-        $lowStockThreshold = 10;
-        $lowStockItemsCount = ProductVariant::where('stock_quantity', '>', 0)
-                                            ->where('stock_quantity', '<=', $lowStockThreshold)
-                                            ->count();
-        $outOfStockItemsCount = ProductVariant::where('stock_quantity', '<=', 0)->count();
-        $recentActivities = InventoryMovement::with(['productVariant.product', 'user', 'location', 'referenceable'])
-                                            ->latest()->take(7)->get();
-        $totalInventoryValue = ProductVariant::sum(DB::raw('stock_quantity * cost_price'));
-        $totalStockQuantity = ProductVariant::sum('stock_quantity');
+        $prevEndDate = $startDate->copy()->subDay()->endOfDay();
+        $prevStartDate = $prevEndDate->copy()->subDays(29)->startOfDay();
 
-        // --- Sales KPIs (Last 30 Days) ---
-        $totalRevenueLast30Days = SalesOrder::where('status', 'completed')
-                                            ->whereBetween('order_date', [$startDateLast30Days, $endDate])
-                                            ->sum('total_amount');
-        $totalCogsLast30Days = SalesOrderItem::join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
-                                            ->join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
-                                            ->where('sales_orders.status', 'completed')
-                                            ->whereBetween('sales_orders.order_date', [$startDateLast30Days, $endDate])
-                                            ->sum(DB::raw('sales_order_items.quantity * product_variants.cost_price'));
-        $grossProfitLast30Days = $totalRevenueLast30Days - $totalCogsLast30Days;
-        $salesCountLast30Days = SalesOrder::where('status', 'completed')
-                                          ->whereBetween('order_date', [$startDateLast30Days, $endDate])
-                                          ->count();
-        $averageOrderValueLast30Days = ($salesCountLast30Days > 0) ? ($totalRevenueLast30Days / $salesCountLast30Days) : 0;
-        $profitMarginLast30Days = ($totalRevenueLast30Days > 0) ? ($grossProfitLast30Days / $totalRevenueLast30Days * 100) : 0;
+        $customerIdentifierJsonPath = 'customer_details->>"$.name"';
+        $rawCustomerIdentifier = DB::raw($customerIdentifierJsonPath);
 
-        // --- Sales KPIs (Previous 30 Days for Comparison) ---
-        $totalRevenuePrev30Days = SalesOrder::where('status', 'completed')
-                                            ->whereBetween('order_date', [$startDatePrev30Days, $endDatePrev30Days])
-                                            ->sum('total_amount');
-        $totalCogsPrev30Days = SalesOrderItem::join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
-                                            ->join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
-                                            ->where('sales_orders.status', 'completed')
-                                            ->whereBetween('sales_orders.order_date', [$startDatePrev30Days, $endDatePrev30Days])
-                                            ->sum(DB::raw('sales_order_items.quantity * product_variants.cost_price'));
-        $grossProfitPrev30Days = $totalRevenuePrev30Days - $totalCogsPrev30Days;
-        $salesCountPrev30Days = SalesOrder::where('status', 'completed')
-                                          ->whereBetween('order_date', [$startDatePrev30Days, $endDatePrev30Days])
-                                          ->count();
-        $averageOrderValuePrev30Days = ($salesCountPrev30Days > 0) ? ($totalRevenuePrev30Days / $salesCountPrev30Days) : 0;
+        // --- Financial KPIs (Last 30 Days) ---
+        $salesOrdersLast30DaysQuery = SalesOrder::whereBetween('created_at', [$startDate, $endDate]);
+        $totalRevenueLast30Days = (clone $salesOrdersLast30DaysQuery)->sum('total_amount');
 
-        // --- Purchase KPIs ---
-        $totalPurchaseOrdersLast30Days = PurchaseOrder::whereIn('status', ['completed', 'received'])->whereBetween('order_date', [$startDateLast30Days, $endDate])->count();
-        $totalPurchaseAmountLast30Days = PurchaseOrder::whereIn('status', ['completed', 'received'])->whereBetween('order_date', [$startDateLast30Days, $endDate])->sum('total_amount');
-        $totalPurchaseOrdersPrev30Days = PurchaseOrder::whereIn('status', ['completed', 'received'])->whereBetween('order_date', [$startDatePrev30Days, $endDatePrev30Days])->count();
-        $totalPurchaseAmountPrev30Days = PurchaseOrder::whereIn('status', ['completed', 'received'])->whereBetween('order_date', [$startDatePrev30Days, $endDatePrev30Days])->sum('total_amount');
-
-        // --- Expense KPIs (Sum of all active recurring expenses in the period) ---
-        $totalExpensesLast30Days = RecurringExpense::where('start_date', '<=', $endDate)
-            ->where(function ($query) use ($startDateLast30Days) {
-                $query->whereNull('end_date')
-                      ->orWhere('end_date', '>=', $startDateLast30Days);
-            })
-            ->sum('monthly_cost');
-
-        $totalExpensesPrev30Days = RecurringExpense::where('start_date', '<=', $endDatePrev30Days)
-            ->where(function ($query) use ($startDatePrev30Days) {
-                $query->whereNull('end_date')
-                      ->orWhere('end_date', '>=', $startDatePrev30Days);
-            })
-            ->sum('monthly_cost');
-
-        // --- Percentage Change Calculations ---
-        $calculatePercentageChange = function($current, $previous) {
-            if ($previous > 0) return (($current - $previous) / $previous) * 100;
-            if ($current > 0) return 100;
-            return 0;
-        };
-        $revenueChangePercentage = $calculatePercentageChange($totalRevenueLast30Days, $totalRevenuePrev30Days);
-        $cogsChangePercentage = $calculatePercentageChange($totalCogsLast30Days, $totalCogsPrev30Days);
-        $profitChangePercentage = $calculatePercentageChange($grossProfitLast30Days, $grossProfitPrev30Days);
-        $salesCountChangePercentage = $calculatePercentageChange($salesCountLast30Days, $salesCountPrev30Days);
-        $aovChangePercentage = $calculatePercentageChange($averageOrderValueLast30Days, $averageOrderValuePrev30Days);
-        $poCountChangePercentage = $calculatePercentageChange($totalPurchaseOrdersLast30Days, $totalPurchaseOrdersPrev30Days);
-        $poAmountChangePercentage = $calculatePercentageChange($totalPurchaseAmountLast30Days, $totalPurchaseAmountPrev30Days);
-        $expensesChangePercentage = $calculatePercentageChange($totalExpensesLast30Days, $totalExpensesPrev30Days);
-
-        // --- CHART DATA ---
-        $chartLabels = [];
-        $currentChartDate = $thirtyDaysAgoForChart->copy();
-        while ($currentChartDate <= $endDate) {
-            $chartLabels[] = $currentChartDate->format('M d');
-            $currentChartDate->addDay();
-        }
-
-        // ... [All your other chart data calculations remain the same] ...
-        // 1. Revenue Over Time
-        $revenueOverTimeDataRaw = SalesOrder::where('status', 'completed')
-            ->whereBetween('order_date', [$thirtyDaysAgoForChart, $endDate])
-            ->select(DB::raw('DATE(order_date) as sale_date'), DB::raw('SUM(total_amount) as daily_revenue'))
-            ->groupBy('sale_date')->orderBy('sale_date', 'ASC')->pluck('daily_revenue', 'sale_date')->all();
-        $revenueOverTimeData = [];
-        $currentChartDate = $thirtyDaysAgoForChart->copy();
-        while ($currentChartDate <= $endDate) {
-            $revenueOverTimeData[] = $revenueOverTimeDataRaw[$currentChartDate->toDateString()] ?? 0;
-            $currentChartDate->addDay();
-        }
-        $revenueOverTimeLabels = $chartLabels;
-
-        // ... [The rest of your chart logic for sales by channel, top selling, etc.]
-        // 2. Sales by Channel
-        $salesByChannel = SalesOrder::whereBetween('order_date', [$startDateLast30Days, $endDate])->where('status', 'completed')
-            ->select('channel', DB::raw('count(*) as count'))->groupBy('channel')
-            ->pluck('count', 'channel')->all();
-        $salesByChannelLabels = !empty($salesByChannel) ? array_keys($salesByChannel) : ['No Data'];
-        $salesByChannelData = !empty($salesByChannel) ? array_values($salesByChannel) : [0];
-
-        // 3. Top 5 Selling Product Variants (Qty) - For Table
-        $topSellingVariantsQty = SalesOrderItem::join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
-            ->join('products', 'product_variants.product_id', '=', 'products.id')
-            ->join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
-            ->where('sales_orders.status', 'completed')->whereBetween('sales_orders.order_date', [$startDateLast30Days, $endDate])
-            ->select(DB::raw('CONCAT(products.name, " - ", product_variants.variant_name) as full_variant_name'), DB::raw('SUM(sales_order_items.quantity) as total_quantity_sold'))
-            ->groupBy('sales_order_items.product_variant_id', 'products.name', 'product_variants.variant_name')->orderByDesc('total_quantity_sold')->take(5)->get();
-
-        // 4. Gross Profit Over Time
-        $dailyCogsRaw = SalesOrderItem::join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
+        $costOfGoodsSold = SalesOrderItem::whereHas('salesOrder', function ($query) use ($startDate, $endDate) {
+            $query->whereBetween('created_at', [$startDate, $endDate]);
+        })
             ->join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
-            ->where('sales_orders.status', 'completed')->whereBetween('sales_orders.order_date', [$thirtyDaysAgoForChart, $endDate])
-            ->select(DB::raw('DATE(sales_orders.order_date) as sale_date'), DB::raw('SUM(sales_order_items.quantity * product_variants.cost_price) as daily_cogs_total'))
-            ->groupBy('sale_date')->orderBy('sale_date', 'ASC')->pluck('daily_cogs_total', 'sale_date')->all();
-        $grossProfitOverTimeLabels = $chartLabels;
-        $grossProfitOverTimeData = [];
-        $currentChartDateForProfit = $thirtyDaysAgoForChart->copy();
-        while ($currentChartDateForProfit <= $endDate) {
-            $dateString = $currentChartDateForProfit->toDateString();
-            $dailyRevenueVal = $revenueOverTimeDataRaw[$dateString] ?? 0;
-            $dailyCogsVal = $dailyCogsRaw[$dateString] ?? 0;
-            $grossProfitOverTimeData[] = $dailyRevenueVal - $dailyCogsVal;
-            $currentChartDateForProfit->addDay();
-        }
+            ->sum(DB::raw('sales_order_items.quantity * product_variants.cost_price'));
 
-        // 5. Top 5 Most Profitable Variants (Value) - For Table
-        $mostProfitableVariants = SalesOrderItem::join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
-            ->join('products', 'product_variants.product_id', '=', 'products.id')
+        $costOfGoodsSoldPrev30Days = SalesOrderItem::whereHas('salesOrder', function ($query) use ($prevStartDate, $prevEndDate) {
+            $query->whereBetween('created_at', [$prevStartDate, $prevEndDate]);
+        })
+            ->join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
+            ->sum(DB::raw('sales_order_items.quantity * product_variants.cost_price'));
+
+        $cogsChangePercentage = $costOfGoodsSoldPrev30Days != 0
+            ? (($costOfGoodsSold - $costOfGoodsSoldPrev30Days) / $costOfGoodsSoldPrev30Days) * 100
+            : ($costOfGoodsSold > 0 ? 100 : 0);
+
+        $operationalCost = RecurringExpense::where('start_date', '<=', $endDate)
+            ->where(function ($query) use ($endDate) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', $endDate);
+            })
+            ->sum('monthly_cost');
+
+        $totalCostLast30Days = $costOfGoodsSold + $operationalCost;
+        $grossProfitLast30Days = $totalRevenueLast30Days - $costOfGoodsSold;
+
+        $totalRevenuePrev30Days = SalesOrder::whereBetween('created_at', [$prevStartDate, $prevEndDate])->sum('total_amount');
+        $grossProfitPrev30Days = $totalRevenuePrev30Days - $costOfGoodsSoldPrev30Days;
+        $grossProfitChangePercentage = $grossProfitPrev30Days != 0
+            ? (($grossProfitLast30Days - $grossProfitPrev30Days) / $grossProfitPrev30Days) * 100
+            : ($grossProfitLast30Days > 0 ? 100 : 0);
+
+        $netProfitLast30Days = $totalRevenueLast30Days - $totalCostLast30Days;
+        $profitMarginLast30Days = $totalRevenueLast30Days > 0 ? ($netProfitLast30Days / $totalRevenueLast30Days) * 100 : 0;
+        $expectedRevenueNext30Days = 0; // Placeholder
+
+        // --- Sales KPIs (Last 30 Days & Change) ---
+        $salesCountLast30Days = (clone $salesOrdersLast30DaysQuery)->count();
+        $salesCountPrev30Days = SalesOrder::whereBetween('created_at', [$prevStartDate, $prevEndDate])->count();
+        $salesCountChangePercentage = $salesCountPrev30Days != 0
+            ? (($salesCountLast30Days - $salesCountPrev30Days) / $salesCountPrev30Days) * 100
+            : ($salesCountLast30Days > 0 ? 100 : 0);
+
+        $averageOrderValue = $salesCountLast30Days > 0 ? $totalRevenueLast30Days / $salesCountLast30Days : 0;
+        $averageOrderValuePrev = $salesCountPrev30Days > 0 ? $totalRevenuePrev30Days / $salesCountPrev30Days : 0;
+        $averageOrderValueChangePercentage = $averageOrderValuePrev != 0
+            ? (($averageOrderValue - $averageOrderValuePrev) / $averageOrderValuePrev) * 100
+            : ($averageOrderValue > 0 ? 100 : 0);
+
+        $newCustomersLast30Days = SalesOrder::select(DB::raw($customerIdentifierJsonPath . ' as customer_id_extracted'), DB::raw('MIN(created_at) as first_order_date'))
+            ->groupBy(DB::raw($customerIdentifierJsonPath))
+            ->having('first_order_date', '>=', $startDate)
+            ->having('first_order_date', '<=', $endDate)
+            ->get()->count();
+        $newCustomersChangePercentage = 0; // Placeholder
+
+
+        // --- Inventory & Purchasing KPIs (Using ProductVariant global stock) ---
+        $totalStockUnits = ProductVariant::where('track_inventory', true)->sum('stock_quantity');
+
+        $inventoryValue = ProductVariant::where('track_inventory', true)
+            ->sum(DB::raw('stock_quantity * cost_price'));
+
+        $lowStockThresholdValue = config('inventory.low_stock_threshold', 10); // Get from config or define
+
+        $lowStockProductCount = ProductVariant::where('track_inventory', true)
+            ->where('stock_quantity', '>', 0) // Must have some stock
+            ->where('stock_quantity', '<=', $lowStockThresholdValue)
+            ->count();
+
+        $outOfStockProductCount = ProductVariant::where('track_inventory', true)
+            ->where('stock_quantity', '<=', 0)
+            ->count();
+
+        $purchaseOrdersCountLast30Days = PurchaseOrder::where('status', 'Received')
+            ->whereBetween('created_at', [$startDate, $endDate])->count();
+        $purchaseOrdersCountPrev30Days = PurchaseOrder::where('status', 'Received')
+            ->whereBetween('created_at', [$prevStartDate, $prevEndDate])->count();
+        $purchaseOrdersCountChangePercentage = $purchaseOrdersCountPrev30Days != 0
+            ? (($purchaseOrdersCountLast30Days - $purchaseOrdersCountPrev30Days) / $purchaseOrdersCountPrev30Days) * 100
+            : ($purchaseOrdersCountLast30Days > 0 ? 100 : 0);
+
+        $purchaseOrderAmountLast30Days = PurchaseOrder::whereBetween('created_at', [$startDate, $endDate])->sum('total_amount');
+        $purchaseOrderAmountPrev30Days = PurchaseOrder::whereBetween('created_at', [$prevStartDate, $prevEndDate])->sum('total_amount');
+        $purchaseOrderAmountChangePercentage = $purchaseOrderAmountPrev30Days != 0
+            ? (($purchaseOrderAmountLast30Days - $purchaseOrderAmountPrev30Days) / $purchaseOrderAmountPrev30Days) * 100
+            : ($purchaseOrderAmountLast30Days > 0 ? 100 : 0);
+
+        // Total Customers, Pending POs, Completed POs for Quick Stats
+        $totalCustomers = SalesOrder::select($rawCustomerIdentifier)->distinct()->count($rawCustomerIdentifier);
+        $pendingPOCount = PurchaseOrder::where('status', 'pending')->whereBetween('created_at', [$startDate, $endDate])->count();
+        $completedPOCount = PurchaseOrder::where('status', 'completed')->whereBetween('created_at', [$startDate, $endDate])->count();
+
+
+        // === Chart Data & Tables (Existing queries) ===
+        $revenueOverTime = SalesOrder::select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as total_revenue'))
+            ->whereBetween('created_at', [$startDate, $endDate])->groupBy('date')->orderBy('date', 'asc')->get();
+        $revenueOverTimeLabels = $revenueOverTime->pluck('date')->map(fn($date) => Carbon::parse($date)->format('M d'))->all();
+        $revenueOverTimeData = $revenueOverTime->pluck('total_revenue')->map(function ($value) {
+            return (float) $value; // Cast each value to a float
+        })->all();
+
+
+        $mostProfitableVariants = SalesOrderItem::with('productVariant.product')
+            ->select('product_variant_id', DB::raw('SUM(sales_order_items.quantity * sales_order_items.price) - SUM(sales_order_items.quantity * product_variants.cost_price) as total_profit'))
+            ->join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
             ->join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
-            ->where('sales_orders.status', 'completed')->whereBetween('sales_orders.order_date', [$startDateLast30Days, $endDate])
-            ->select(DB::raw('CONCAT(products.name, " - ", product_variants.variant_name) as full_variant_name'), DB::raw('SUM((sales_order_items.price_per_unit - product_variants.cost_price) * sales_order_items.quantity) as total_profit'))
-            ->groupBy('sales_order_items.product_variant_id', 'products.name', 'product_variants.variant_name')->orderByDesc('total_profit')->take(5)->get();
+            ->whereBetween('sales_orders.created_at', [$startDate, $endDate])->groupBy('product_variant_id')->orderByDesc('total_profit')->havingRaw('total_profit > 0')->limit(7)->get();
 
-        // 6. Purchases Over Time
-        $purchasesOverTimeDataRaw = PurchaseOrder::whereIn('status', ['completed', 'received'])
-            ->whereBetween('order_date', [$thirtyDaysAgoForChart, $endDate])
-            ->select(DB::raw('DATE(order_date) as purchase_date'), DB::raw('SUM(total_amount) as daily_purchase_amount'))
-            ->groupBy('purchase_date')->orderBy('purchase_date', 'ASC')->pluck('daily_purchase_amount', 'purchase_date')->all();
-        $purchasesOverTimeLabels = $chartLabels;
-        $purchasesOverTimeData = [];
-        $currentChartDateForPurchase = $thirtyDaysAgoForChart->copy();
-        while ($currentChartDateForPurchase <= $endDate) {
-            $purchasesOverTimeData[] = $purchasesOverTimeDataRaw[$currentChartDateForPurchase->toDateString()] ?? 0;
-            $currentChartDateForPurchase->addDay();
-        }
-
-        // 7. Inventory Value by Category
-        $inventoryValueByCategoryRaw = ProductVariant::join('products', 'product_variants.product_id', '=', 'products.id')
-            ->join('categories', 'products.category_id', '=', 'categories.id')
-            ->select('categories.name as category_name', DB::raw('SUM(product_variants.stock_quantity * product_variants.cost_price) as category_value'))
-            ->where('product_variants.stock_quantity', '>', 0)->groupBy('categories.name')->orderByDesc('category_value')->get();
-        $inventoryValueByCategoryLabels = []; $inventoryValueByCategoryData = []; $otherValue = 0; $maxCategoriesInChart = 4;
-        foreach ($inventoryValueByCategoryRaw as $index => $item) {
-            if ($index < $maxCategoriesInChart) { $inventoryValueByCategoryLabels[] = $item->category_name; $inventoryValueByCategoryData[] = (float)$item->category_value; }
-            else { $otherValue += (float)$item->category_value; }
-        }
-        if ($otherValue > 0 || $inventoryValueByCategoryRaw->count() > $maxCategoriesInChart || $inventoryValueByCategoryRaw->isEmpty()) {
-            $inventoryValueByCategoryLabels[] = $inventoryValueByCategoryRaw->isEmpty() && $otherValue == 0 ? 'No Data' : 'Other';
-            $inventoryValueByCategoryData[] = $inventoryValueByCategoryRaw->isEmpty() && $otherValue == 0 ? 0 : $otherValue;
-        }
-
-        // 8. Top Low Stock Items - For Table
-        $topLowStockItems = ProductVariant::with('product')->where('stock_quantity', '<', $lowStockThreshold)->where('stock_quantity', '>', 0)->orderBy('stock_quantity', 'ASC')->take(5)->get();
-
-        // 9. Data for Sales by Category Chart
-        $salesByCategoryRaw = SalesOrderItem::join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
-            ->join('products', 'product_variants.product_id', '=', 'products.id')
-            ->join('categories', 'products.category_id', '=', 'categories.id')
+        $topSellingVariants = SalesOrderItem::with('productVariant.product')
+            ->select('product_variant_id', DB::raw('SUM(sales_order_items.quantity) as total_quantity_sold'))
             ->join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
-            ->where('sales_orders.status', 'completed')->whereBetween('sales_orders.order_date', [$startDateLast30Days, $endDate])
-            ->select('categories.name as category_name', DB::raw('SUM(sales_order_items.quantity * sales_order_items.price_per_unit) as category_sales_value'))
-            ->groupBy('categories.name')->orderByDesc('category_sales_value')->get();
-        $salesByCategoryChartLabels = []; $salesByCategoryChartDataValues = []; $otherSalesValue = 0;
-        foreach ($salesByCategoryRaw as $index => $item) {
-            if ($index < $maxCategoriesInChart) { $salesByCategoryChartLabels[] = $item->category_name; $salesByCategoryChartDataValues[] = (float)$item->category_sales_value; }
-            else { $otherSalesValue += (float)$item->category_sales_value; }
-        }
-        if ($otherSalesValue > 0 || $salesByCategoryRaw->count() > $maxCategoriesInChart || $salesByCategoryRaw->isEmpty()) {
-            $salesByCategoryChartLabels[] = $salesByCategoryRaw->isEmpty() && $otherSalesValue == 0 ? 'No Data' : 'Other';
-            $salesByCategoryChartDataValues[] = $salesByCategoryRaw->isEmpty() && $otherSalesValue == 0 ? 0 : $otherSalesValue;
+            ->whereBetween('sales_orders.created_at', [$startDate, $endDate])->groupBy('product_variant_id')->orderByDesc('total_quantity_sold')->limit(7)->get();
+
+        // topLowStockItems for the list view - uses global stock_quantity
+        $topLowStockItems = ProductVariant::with('product')
+            ->where('track_inventory', true)
+            ->where('stock_quantity', '<=', $lowStockThresholdValue)
+            ->orderBy('stock_quantity', 'asc')
+            ->limit(10)
+            ->get();
+
+        $salesByCategory = Category::query()
+            ->join('products', 'categories.id', '=', 'products.category_id')
+            ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+            ->join('sales_order_items', 'product_variants.id', '=', 'sales_order_items.product_variant_id')
+            ->join('sales_orders', 'sales_order_items.sales_order_id', '=', 'sales_orders.id')
+            ->whereBetween('sales_orders.created_at', [$startDate, $endDate])->select('categories.name', DB::raw('SUM(sales_order_items.quantity * sales_order_items.price) as total_sales'))
+            ->groupBy('categories.id', 'categories.name')->orderByDesc('total_sales')->havingRaw('SUM(sales_order_items.quantity * sales_order_items.price) > 0')->limit(5)->get();
+        $salesByCategoryChartLabels = $salesByCategory->pluck('name')->all();
+        $salesByCategoryChartDataValues = $salesByCategory->pluck('total_sales')->map(function ($value) {
+            return (float) $value;
+        })->all();
+
+        $salesByChannel = SalesOrder::select('channel', DB::raw('COUNT(*) as count'))
+            ->whereBetween('created_at', [$startDate, $endDate])->groupBy('channel')->orderByDesc('count')->get();
+        $salesByChannelLabels = $salesByChannel->pluck('channel')->map(fn($channel) => ucwords(str_replace('_', ' ', $channel)))->all();
+        $salesByChannelData = $salesByChannel->pluck('count')->all();
+
+        $inventoryValueByCategory = Category::withSum(['productVariants as total_inventory_value' => function ($query) {
+            $query->where('track_inventory', true);
+        }], DB::raw('stock_quantity * cost_price'))
+            ->having('total_inventory_value', '>', 0)->orderByDesc('total_inventory_value')->limit(5)->get();
+        $inventoryValueByCategoryLabels = $inventoryValueByCategory->pluck('name')->all();
+        $inventoryValueByCategoryData = $inventoryValueByCategory->pluck('total_inventory_value')->all();
+
+
+        $recentPurchases = PurchaseOrder::with('supplier', 'items.productVariant')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+        // insert total_amount to each purchase order
+        $recentPurchases->each(function ($purchaseOrder) {
+            $purchaseOrder->total_amount = $purchaseOrder->items->sum(function ($item) {
+                // dd($item->quantity * $item->productVariant->cost_price);
+                return $item->quantity * $item->productVariant->cost_price;
+            });
+        });
+        foreach ($recentPurchases as $purchaseOrder) {
+            $purchaseOrder->items->each(function ($item) {
+                $item->productVariant->load('product'); // Eager load product for each item
+
+            });
         }
 
-        // --- Forecasting ---
-        $projectionDaysCount = 30;
-        $daysInHistoricalPeriod = $startDateLast30Days->diffInDays($endDate) + 1;
-        $avgDailyRevenueForProjection = ($totalRevenueLast30Days > 0 && $daysInHistoricalPeriod > 0) ? $totalRevenueLast30Days / $daysInHistoricalPeriod : 0;
-        $expectedRevenueNext30Days = $avgDailyRevenueForProjection * $projectionDaysCount;
-        $revenueForecastLabels = [];
-        $revenueForecastActualData = [];
-        $revenueForecastProjectedData = [];
-        foreach($chartLabels as $index => $label) {
-            $revenueForecastLabels[] = $label;
-            $revenueForecastActualData[] = $revenueOverTimeData[$index] ?? 0;
-            $revenueForecastProjectedData[] = null;
+
+        // **Inventory by Location Chart Data (Using your provided query)**
+        // This query shows "Quantity of Items Received by Location in Last 30 Days via POs"
+        // NOT "Current Stock Quantity by Location".
+        // If ProductVariant has a location_id, you could sum ProductVariant->stock_quantity grouped by that location_id for current stock.
+        $inventoryByLocation = PurchaseOrder::select(
+            'locations.name',
+            DB::raw('SUM(purchase_order_items.quantity) as total_stock_received_on_po') // Renamed for clarity
+        )
+            ->join('purchase_order_items', 'purchase_orders.id', '=', 'purchase_order_items.purchase_order_id')
+            ->join('locations', 'purchase_orders.receiving_location_id', '=', 'locations.id')
+            ->where('purchase_orders.status', 'received') // Only count items from POs actually marked as received
+            ->whereBetween('purchase_orders.updated_at', [$startDate, $endDate]) // Consider POs marked received in this period
+            ->groupBy('locations.id', 'locations.name')
+            ->orderByDesc('total_stock_received_on_po')
+            ->limit(5)
+            ->get();
+
+        $inventoryByLocationLabels = $inventoryByLocation->pluck('name')->all();
+        $inventoryByLocationData = $inventoryByLocation->pluck('total_stock_received_on_po')->all();
+
+
+        $recentSalesOrders = SalesOrder::orderBy('created_at', 'desc')->limit(5)->get();
+
+
+
+        $monthlyTargetAmount = 600; // Example: Get this from settings or define it
+        $currentRevenueForMonth = $totalRevenueLast30Days; // Or a more specific "current month" revenue
+
+        // Ensure target is not zero to avoid division by zero
+        $percentageAchieved = ($monthlyTargetAmount > 0) ? ($currentRevenueForMonth / $monthlyTargetAmount) * 100 : 0;
+        $percentageAchieved = min($percentageAchieved, 100); // Cap at 100% for the gauge display
+
+        // Calculate revenue for the *previous* month (from 60 to 30 days ago) for comparison
+        $prevMonthStartDate = $startDate->copy()->subMonth()->startOfMonth();
+        $prevMonthEndDate = $startDate->copy()->subMonth()->endOfMonth(); // Or $prevStartDate->copy()->endOfMonth();
+
+        $revenueLastMonth = SalesOrder::whereBetween('created_at', [$prevMonthStartDate, $prevMonthEndDate])
+            ->sum('total_amount');
+
+        $revenueIncreaseAmount = $currentRevenueForMonth - $revenueLastMonth;
+        $percentageChangeFromLastMonth = 0;
+        if ($revenueLastMonth > 0) {
+            $percentageChangeFromLastMonth = (($currentRevenueForMonth - $revenueLastMonth) / $revenueLastMonth) * 100;
+        } elseif ($currentRevenueForMonth > 0) {
+            $percentageChangeFromLastMonth = 100; // Infinite or 100% increase if last month was 0
         }
-        $currentProjectionDate = $endDate->copy()->addDay();
-        for ($i = 0; $i < $projectionDaysCount; $i++) {
-            $revenueForecastLabels[] = $currentProjectionDate->format('M d');
-            $revenueForecastActualData[] = null;
-            $revenueForecastProjectedData[] = $avgDailyRevenueForProjection;
-            $currentProjectionDate->addDay();
-        }
+
+
+        // Data for the doughnut chart
+        $monthlyTargetChartData = [
+            round($percentageAchieved, 2),            // Achieved part
+            max(0, 100 - round($percentageAchieved, 2)) // Remaining part (ensure it's not negative)
+        ];
+
+        $monthlyTargetChartColors = [
+            '#4CAF50', // Green for achieved
+            '#E0E0E0'  // Grey for remaining
+        ];
+
+
 
         return view('dashboard', compact(
-            'totalProducts', 'lowStockItemsCount', 'outOfStockItemsCount', 'recentActivities', 'totalInventoryValue', 'totalStockQuantity',
-            'totalRevenueLast30Days', 'totalCogsLast30Days', 'grossProfitLast30Days',
-            'salesCountLast30Days', 'averageOrderValueLast30Days', 'profitMarginLast30Days',
-            'revenueChangePercentage', 'cogsChangePercentage', 'profitChangePercentage', 'salesCountChangePercentage', 'aovChangePercentage',
-            'totalPurchaseOrdersLast30Days', 'totalPurchaseAmountLast30Days',
-            'poCountChangePercentage', 'poAmountChangePercentage',
-            'totalExpensesLast30Days', 'expensesChangePercentage', // New expense variables
-            'chartLabels',
-            'revenueOverTimeLabels', 'revenueOverTimeData',
-            'salesByChannelLabels', 'salesByChannelData',
+            'totalRevenueLast30Days',
+            'costOfGoodsSold',
+            'grossProfitLast30Days',
+            'netProfitLast30Days',
+            'profitMarginLast30Days',
+            'totalCostLast30Days',
+            'operationalCost',
+            'cogsChangePercentage',
+            'grossProfitChangePercentage',
             'expectedRevenueNext30Days',
-            'topSellingVariantsQty',
-            'grossProfitOverTimeLabels', 'grossProfitOverTimeData',
+
+            'monthlyTargetAmount',
+            'currentRevenueForMonth',
+            'percentageAchieved',
+            'percentageChangeFromLastMonth',
+            'revenueIncreaseAmount',
+            'monthlyTargetChartData',
+            'monthlyTargetChartColors',
+
+            'salesCountLast30Days',
+            'salesCountChangePercentage',
+            'averageOrderValue',
+            'averageOrderValueChangePercentage',
+            'newCustomersLast30Days',
+            'newCustomersChangePercentage',
+
+            'totalStockUnits',
+            'inventoryValue',
+            'lowStockProductCount',
+            'outOfStockProductCount',
+            'purchaseOrdersCountLast30Days',
+            'purchaseOrdersCountChangePercentage',
+            'purchaseOrderAmountLast30Days',
+            'purchaseOrderAmountChangePercentage', // Renamed from purchaseOrderValue to be explicit
+
+            'totalCustomers',
+            'pendingPOCount',
+            'completedPOCount',
+
+            'recentPurchases',
+
+            'revenueOverTimeLabels',
+            'revenueOverTimeData',
             'mostProfitableVariants',
-            'purchasesOverTimeLabels', 'purchasesOverTimeData',
-            'inventoryValueByCategoryLabels', 'inventoryValueByCategoryData',
+            'topSellingVariants',
             'topLowStockItems',
-            'lowStockThreshold',
-            'salesByCategoryChartLabels', 'salesByCategoryChartDataValues',
-            'revenueForecastLabels',
-            'revenueForecastActualData',
-            'revenueForecastProjectedData'
+            'salesByCategoryChartLabels',
+            'salesByCategoryChartDataValues',
+            'salesByChannelLabels',
+            'salesByChannelData',
+            'inventoryValueByCategoryLabels',
+            'inventoryValueByCategoryData',
+            'inventoryByLocationLabels',
+            'inventoryByLocationData',
+            'recentSalesOrders'
         ));
     }
 }

@@ -58,7 +58,38 @@ class PurchaseOrderObserver
      */
     public function created(PurchaseOrder $purchaseOrder): void
     {
-        //
+        // if the order is created and the status is received, we can assume stock is added
+        if ($purchaseOrder->status === 'received') {
+            Log::info("Purchase Order #{$purchaseOrder->order_number} created with status received. Processing stock updates.");
+
+            // Eager load items if not already loaded to avoid N+1 queries
+            $purchaseOrder->loadMissing('items.productVariant'); // Ensures items and their variants are loaded
+
+            foreach ($purchaseOrder->items as $item) {
+                $variant = $item->productVariant; // Access via loaded relationship
+
+                if ($variant) {
+                    $quantityToAdd = $item->quantity;
+                    $variant->increment('stock_quantity', $quantityToAdd);
+                    Log::info("Stock updated for Variant ID {$variant->id}. Added {$quantityToAdd}. New stock: {$variant->stock_quantity}");
+
+                    InventoryMovement::create([
+                        'product_variant_id' => $item->product_variant_id,
+                        'location_id' => $purchaseOrder->receiving_location_id, // Needs a receiving location
+                        'type' => 'purchase_receipt',
+                        'quantity' => $quantityToAdd,
+                        'reason' => 'Received from PO #' . $purchaseOrder->order_number,
+                        'referenceable_id' => $purchaseOrder->id,
+                        'referenceable_type' => PurchaseOrder::class, // Correct
+                        'user_id' => Auth::id(),
+                    ]);
+                    Log::info("Inventory movement created for Variant ID {$variant->id} from PO #{$purchaseOrder->order_number}.");
+
+                } else {
+                    Log::error("Product Variant ID {$item->product_variant_id} not found for PO Item ID {$item->id} on PO #{$purchaseOrder->order_number}.");
+                }
+            }
+        }
     }
 
 
