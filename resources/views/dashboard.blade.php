@@ -10,11 +10,7 @@
                     A real-time overview of your sales and inventory performance.
                 </p>
             </div>
-            {{-- Optional: Date Range Picker Placeholder --}}
-            {{-- <div class="p-1 bg-gray-100 dark:bg-gray-700 rounded-md">
-                <button class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 rounded-md shadow-sm">Last 30 Days</button>
-                Add more buttons or a date picker component here
-            </div> --}}
+
         </div>
 
         {{-- Financial Summary Section (Last 30 Days) --}}
@@ -22,17 +18,23 @@
             <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200">Financial Summary (Last 30 Days)</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <x-card>
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Revenue</h3>
-                    <p
-                        class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white {{ $totalRevenueLast30Days ?? 0 >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500' }}">
-                        {{ $totalRevenueLast30Days ?? 0 >= 0 ? 'OMR' : '- OMR' }}
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-green-100 dark:bg-green-700/30 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-green-600 dark:text-green-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+                            </svg>
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-700 dark:text-gray-200">Total Revenue</h3>
+                    </div>
+                    <p class="mt-3 text-3xl font-semibold {{ ($totalRevenueLast30Days ?? 0) >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500' }}">
+                        {{ ($totalRevenueLast30Days ?? 0) >= 0 ? 'OMR' : '- OMR' }}
                         {{ number_format(abs($totalRevenueLast30Days ?? 0), 2) }}
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Total sales revenue in the last 30 days.
                     </p>
-
                 </x-card>
+
                 {{-- <x-card>
                     <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total COGS</h3>
                     <p class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white {{ ($costOfGoodsSold ?? 0) >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500' }}">
@@ -52,22 +54,35 @@
                     </p>
                 </x-card> --}}
                 <x-card>
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Costs</h3>
-                    <p class="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-orange-100 dark:bg-orange-700/30 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-orange-600 dark:text-orange-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-700 dark:text-gray-200">Total Costs</h3>
+                    </div>
+                    <p class="mt-3 text-3xl font-semibold text-gray-900 dark:text-white">
                         OMR {{ number_format($totalCostLast30Days ?? 0, 2) }}
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        COGS: OMR {{ number_format($costOfGoodsSold ?? 0, 2) }} <br>
-                        Ops Cost: OMR {{ number_format($operationalCost ?? 0, 2) }} (monthly)
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Total costs including COGP and operational expenses in the last 30 days.
+
                     </p>
                 </x-card>
                 <x-card>
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Net Profit</h3>
-                    <p
-                        class="mt-1 text-3xl font-semibold {{ ($netProfitLast30Days ?? 0) >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500' }}">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 {{ ($netProfitLast30Days ?? 0) >= 0 ? 'bg-green-100 dark:bg-green-700/30' : 'bg-red-100 dark:bg-red-700/30' }} rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 {{ ($netProfitLast30Days ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.286-1.046a.75.75 0 00-.358-1.416l-1.48-.37M18.75 4.97l-1.48-.37M5.25 4.97A48.416 48.416 0 0112 4.5c2.291 0 4.545.16 6.75.47m-13.5 0c-1.01.143-2.01.317-3 .52m3-.52l-2.286-1.046a.75.75 0 01.358-1.416l1.48-.37M5.25 4.97l1.48-.37M9 11.25l3-3 3 3M9 11.25l-3 3m3-3l3-3" />
+                            </svg>
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-700 dark:text-gray-200">Net Profit</h3>
+                    </div>
+                    <p class="mt-3 text-3xl font-semibold {{ ($netProfitLast30Days ?? 0) >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500' }}">
                         OMR {{ number_format($netProfitLast30Days ?? 0, 2) }}
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Profit Margin: <span
                             class="font-semibold {{ ($profitMarginLast30Days ?? 0) >= 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500' }}">{{ number_format($profitMarginLast30Days ?? 0, 1) }}%</span>
                     </p>
@@ -107,7 +122,8 @@
                         </x-slot:icon>
                     </x-kpi-card>
 
-                    <x-kpi-card title="Total COGS" value="OMR {{ number_format($costOfGoodsSold ?? 0, 2) }}"
+
+                    <x-kpi-card title="Total Cost of Goods Sold" value="OMR {{ number_format($costOfGoodsSold ?? 0, 2) }}"
                         color="red" change="{{ $costOfGoodsSoldChangePercentage ?? 0 }}"
                         changeType="{{ ($costOfGoodsSoldChangePercentage ?? 0) >= 0 ? 'increase' : 'decrease' }}"
                         changeText="vs prev 30d">

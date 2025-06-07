@@ -37,6 +37,7 @@ class DashboardController extends Controller
             ->join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
             ->sum(DB::raw('sales_order_items.quantity * product_variants.cost_price'));
 
+
         $costOfGoodsSoldPrev30Days = SalesOrderItem::whereHas('salesOrder', function ($query) use ($prevStartDate, $prevEndDate) {
             $query->whereBetween('created_at', [$prevStartDate, $prevEndDate]);
         })
@@ -47,6 +48,11 @@ class DashboardController extends Controller
             ? (($costOfGoodsSold - $costOfGoodsSoldPrev30Days) / $costOfGoodsSoldPrev30Days) * 100
             : ($costOfGoodsSold > 0 ? 100 : 0);
 
+
+        $purchaseOrdersCost = PurchaseOrder::where('status', 'Received')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->sum('total_amount');
+
         $operationalCost = RecurringExpense::where('start_date', '<=', $endDate)
             ->where(function ($query) use ($endDate) {
                 $query->whereNull('end_date')
@@ -54,7 +60,7 @@ class DashboardController extends Controller
             })
             ->sum('monthly_cost');
 
-        $totalCostLast30Days = $costOfGoodsSold + $operationalCost;
+        $totalCostLast30Days =  $purchaseOrdersCost + $operationalCost;
         $grossProfitLast30Days = $totalRevenueLast30Days - $costOfGoodsSold;
 
         $totalRevenuePrev30Days = SalesOrder::whereBetween('created_at', [$prevStartDate, $prevEndDate])->sum('total_amount');
