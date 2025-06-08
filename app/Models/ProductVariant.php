@@ -60,4 +60,14 @@ class ProductVariant extends Model
     {
         return $this->product->name . ' - ' . $this->variant_name;
     }
+
+    /**
+     * Get the Sales Order Item Count for the Product Variant.
+     *
+     * @return int
+     */
+    public function getSalesOrderItemCountAttribute(): int
+    {
+        return $this->salesOrderItems()->count();
+    }
 }

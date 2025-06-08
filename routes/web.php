@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Livewire\Settings;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Product\ProductForm;
 use App\Livewire\Product\ProductList;
@@ -61,5 +62,9 @@ Route::get('/sales-orders/{salesOrder}', SalesOrderForm::class)->name('sales-ord
 Route::get('/expenses', RecurringExpenseList::class)->name('expenses.index');
 Route::get('/expenses/create', RecurringExpenseForm::class)->name('expenses.create');
 Route::get('/expenses/{expense}/edit', RecurringExpenseForm::class)->name('expenses.edit');
+
+// Settings
+Route::get('/settings', Settings::class)->name('settings.index');
+
 
 // ... (other routes)

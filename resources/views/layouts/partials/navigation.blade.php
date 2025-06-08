@@ -29,17 +29,7 @@
             </div>
 
             <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <div class="relative">
-                    <button @click="darkMode = 'light'"
-                        class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200"
-                        :class="{ 'bg-gray-200 dark:bg-gray-700': darkMode === 'light' }">Light</button>
-                    <button @click="darkMode = 'dark'"
-                        class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200"
-                        :class="{ 'bg-gray-200 dark:bg-gray-700': darkMode === 'dark' }">Dark</button>
-                    <button @click="darkMode = 'system'"
-                        class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200"
-                        :class="{ 'bg-gray-200 dark:bg-gray-700': darkMode === 'system' }">System</button>
-                </div>
+
 
                 @auth
                     <div class="ml-3 relative">

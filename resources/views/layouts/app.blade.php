@@ -21,7 +21,7 @@
     >
         <div class="relative min-h-screen md:flex">
             <!-- Sidebar -->
-            <x-layouts.sidebar />
+
 
             <!-- Main Content Area -->
             <div class="flex-1">
