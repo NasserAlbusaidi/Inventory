@@ -17,6 +17,8 @@ class ProductVariant extends Model
         'cost_price',
         'selling_price',
         'barcode',
+        'track_inventory',
+        'location_id',
         'stock_quantity',
     ];
 
