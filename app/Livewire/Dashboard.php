@@ -100,7 +100,7 @@ class Dashboard extends Component
     {
 
 
-        $cacheKey = 'dashboard_data_' . $this->startDate->toDateString() . '_' . $this->endDate->toDateString();
+        $cacheKey = 'dashboard_data';
         $data = Cache::remember($cacheKey, now()->addMinutes(1), function () {
 
 
@@ -121,6 +121,8 @@ class Dashboard extends Component
                 ->join('product_variants', 'sales_order_items.product_variant_id', '=', 'product_variants.id')
                 ->sum(DB::raw('sales_order_items.quantity * product_variants.cost_price'));
 
+                $costOfGoods = PurchaseOrder::whereBetween('created_at', [$this->startDate, $this->endDate])
+                ->sum('total_amount');
             $operationalCost = RecurringExpense::where('start_date', '<=', $this->endDate)
                 ->where(function ($query) {
                     $query->whereNull('end_date')
@@ -131,7 +133,7 @@ class Dashboard extends Component
             // Note: For simplicity, we are keeping the operational cost as a monthly flat rate for now.
             // A more accurate calculation would prorate this based on the selected date range.
 
-            $totalCostLast30Days = $costOfGoodsSold + $operationalCost; // Simplified from your original for clarity
+            $totalCostLast30Days = $costOfGoods + $operationalCost; // Simplified from your original for clarity
             $netProfitLast30Days = $totalRevenueLast30Days - $totalCostLast30Days;
             $profitMarginLast30Days = $totalRevenueLast30Days > 0 ? ($netProfitLast30Days / $totalRevenueLast30Days) * 100 : 0;
 
@@ -180,6 +182,9 @@ class Dashboard extends Component
             $salesByChannelLabels = $salesByChannel->pluck('channel')->map(fn($channel) => ucwords(str_replace('_', ' ', $channel)))->all();
             $salesByChannelData = $salesByChannel->pluck('count')->all();
 
+            $totalSalesOrdersCount = SalesOrder::count();
+            $totalPurchaseOrdersCount = PurchaseOrder::count();
+
             $totalCustomers = SalesOrder::select($rawCustomerIdentifier)->distinct()->count($rawCustomerIdentifier);
             $pendingPOCount = PurchaseOrder::where('status', 'pending')->count();
             $completedPOCount = PurchaseOrder::where('status', 'completed')->count();
@@ -225,6 +230,13 @@ class Dashboard extends Component
                 'topSellingVariants' => $topSellingVariants,
                 'recentPurchases' => $recentPurchases,
                 'recentSalesOrders' => $recentSalesOrders,
+                'dateRange' => [
+                    'start' => $this->startDate->toDateString(),
+                    'end' => $this->endDate->toDateString(),
+                ],
+                'costOfGoods' => $costOfGoods,
+                'totalSalesOrdersCount' => $totalSalesOrdersCount,
+                'totalPurchaseOrdersCount' => $totalPurchaseOrdersCount,
                 'totalCustomers' => $totalCustomers,
                 'pendingPOCount' => $pendingPOCount,
                 'completedPOCount' => $completedPOCount,

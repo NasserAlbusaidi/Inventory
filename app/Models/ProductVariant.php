@@ -22,6 +22,14 @@ class ProductVariant extends Model
         'stock_quantity',
     ];
 
+
+
+     /**
+     * @var array
+     */
+    protected $appends = ['full_name_with_variant'];
+
+
     /**
      * Get the product that owns the variant.
      */
@@ -71,5 +79,23 @@ class ProductVariant extends Model
     public function getSalesOrderItemCountAttribute(): int
     {
         return $this->salesOrderItems()->count();
+    }
+
+    /**
+     * NEW ACCESSOR:
+     *
+     * @return string
+     */
+    public function getFullNameWithVariantAttribute(): string // <-- NEW ACCESSOR
+    {
+        // Eager-load the 'product' relationship for efficiency if not already loaded.
+        if (!$this->relationLoaded('product')) {
+            $this->load('product');
+        }
+
+        $productName = $this->product->name ?? 'Unknown Product';
+        $sku = $this->product->sku ?? 'N/A'; // Assuming your Product model has an 'sku' field
+
+        return "{$productName} - {$this->variant_name} (SKU: {$sku})";
     }
 }

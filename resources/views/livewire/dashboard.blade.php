@@ -33,41 +33,11 @@
     <div wire:loading.remove wire:target="dateRange,customStartDate,customEndDate">
 
     {{-- ================================================ --}}
-    {{--  NEW: Date Range Selector Section               --}}
-    {{-- ================================================ --}}
-   <div class="flex justify-end mb-6">
-    <div class="flex items-center gap-3 bg-white dark:bg-gray-800/50 rounded-lg shadow-sm p-2">
-        <label for="date_range" class="text-sm font-medium text-gray-600 dark:text-gray-300 ml-1">Date Range:</label>
-
-        <select wire:model.live="dateRange" id="date_range"
-            class="text-sm rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-            <option value="last_30_days">Last 30 Days</option>
-            <option value="this_month">This Month</option>
-            <option value="this_week">This Week</option>
-            <option value="today">Today</option>
-            <option value="this_year">This Year</option>
-            <option value="custom">Custom Range</option>
-        </select>
-
-        @if ($dateRange == 'custom')
-            <div class="flex items-center gap-2">
-                <input type="date" wire:model.live="customStartDate"
-                    class="text-sm rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                <span class="text-sm text-gray-500 dark:text-gray-400">to</span>
-                <input type="date" wire:model.live="customEndDate"
-                    class="text-sm rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-            </div>
-        @endif
-    </div>
-</div>
-
-
-    {{-- ================================================ --}}
     {{--  ORIGINAL Dashboard Content Starts Here         --}}
     {{-- ================================================ --}}
     <div class="space-y-8">
         {{-- Header --}}
-        <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
                 <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">
                     Dashboard
@@ -77,11 +47,46 @@
                 </p>
             </div>
 
+            {{-- Date Range Selector Section --}}
+            <div class="flex items-center gap-3 bg-white dark:bg-gray-800/50 rounded-lg shadow-sm p-2">
+                <label for="date_range" class="text-sm font-medium text-gray-600 dark:text-gray-300 ml-1">Date Range:</label>
+
+                <select wire:model.live="dateRange" id="date_range"
+                    class="text-sm rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <option value="last_30_days">Last 30 Days</option>
+                    <option value="this_month">This Month</option>
+                    <option value="this_week">This Week</option>
+                    <option value="today">Today</option>
+                    <option value="this_year">This Year</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+
+                @if ($dateRange == 'custom')
+                    <div class="flex items-center gap-2">
+                        <input type="date" wire:model.live="customStartDate"
+                            class="text-sm rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">to</span>
+                        <input type="date" wire:model.live="customEndDate"
+                            class="text-sm rounded-md border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    </div>
+                @endif
+            </div>
         </div>
 
         {{-- Financial Summary Section --}}
         <div class="space-y-2">
-            <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200">Financial Summary (Selected Period)</h2>
+                        <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200">
+                Financial Summary
+                @switch($dateRange)
+                    @case('last_30_days') - Last 30 Days @break
+                    @case('this_month') - This Month @break
+                    @case('this_week') - This Week @break
+                    @case('today') - Today @break
+                    @case('this_year') - This Year @break
+                    @default - Custom Range: {{ $customStartDate ? $customStartDate : 'N/A' }} to {{ $customEndDate ? $customEndDate : 'N/A' }}
+                @endswitch
+            </h2>
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <x-card>
                     <div class="flex items-center space-x-3">
@@ -119,7 +124,7 @@
                         OMR {{ number_format($totalCostLast30Days ?? 0, 2) }}
                     </p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        COGS + Operational Expenses in the selected period.
+                        Cost of Goods ({{ number_format($costOfGoods ?? 0, 2) }}) + Operational Costs ({{ number_format($operationalCost ?? 0, 2) }})
                     </p>
                 </x-card>
 
@@ -373,6 +378,13 @@
                                     <p class="text-sm text-gray-700 dark:text-gray-300 mt-0.5">
                                         Supplier: {{ $purchase->supplier->name ?? 'N/A' }}
                                     </p>
+                                    <div class="flex justify-between items-end mt-1">
+                                        <span class="text-sm font-medium text-gray-800 dark:text-gray-100">OMR
+                                            {{ number_format($purchase->total_amount, 2) }}</span>
+
+                                    </div>
+
+
                                 </div>
                             @empty
                                 <div
@@ -490,14 +502,15 @@
                                 class="text-lg font-bold text-gray-800 dark:text-gray-200">{{ $totalCustomers }}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Pending POs</span>
+                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Sales Orders</span>
                             <span
-                                class="text-lg font-bold text-gray-800 dark:text-gray-200">{{ $pendingPOCount ?? 0 }}</span>
+                                class="text-lg font-bold text-gray-800 dark:text-gray-200">{{ $totalSalesOrdersCount ?? 0 }}</span>
                         </div>
+
                         <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Completed POs</span>
+                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Purchase Orders</span>
                             <span
-                                class="text-lg font-bold text-gray-800 dark:text-gray-200">{{ $completedPOCount ?? 0 }}</span>
+                                class="text-lg font-bold text-gray-800 dark:text-gray-200">{{ $totalPurchaseOrdersCount ?? 0 }}</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">PO Value (Selected Period)</span>
@@ -699,6 +712,3 @@
 @endpush
 
 </div>
-
-
-

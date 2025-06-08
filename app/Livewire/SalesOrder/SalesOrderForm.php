@@ -58,7 +58,7 @@ class SalesOrderForm extends Component
 
             if (!empty($item['product_variant_id']) && isset($item['available_stock'])) {
                 $availableStock = (int)$item['available_stock'];
-                 if ($availableStock < ($item['quantity'] ?? 1) ) {
+                if ($availableStock < ($item['quantity'] ?? 1)) {
                     $rules["items.{$index}.quantity"] .= '|max:' . $availableStock;
                 }
             }
@@ -127,19 +127,15 @@ class SalesOrderForm extends Component
     protected function loadProductVariants()
     {
         $this->allProductVariants = ProductVariant::with('product:id,name,sku')
-            ->join('products', 'product_variants.product_id', '=', 'products.id')
-            ->select(
-                'product_variants.id',
-                'product_variants.selling_price',
-                'product_variants.stock_quantity',
-                DB::raw('CONCAT(products.name, " - ", product_variants.variant_name, " (SKU: ", COALESCE(products.sku, "N/A"), ")") as full_name_with_variant')
-            )
-            ->orderBy('products.name')
-            ->orderBy('product_variants.variant_name')
-            ->get();
+        ->join('products', 'product_variants.product_id', '=', 'products.id') // Join is still good for sorting
+        ->select('product_variants.*')
+        ->orderBy('products.name')
+        ->orderBy('product_variants.variant_name')
+        ->get();
     }
 
-    private function initializeNewSalesOrder() {
+    private function initializeNewSalesOrder()
+    {
         $this->salesOrderInstance = new SalesOrder();
         $this->order_date = Carbon::now()->format('Y-m-d');
         $this->status = 'pending';
@@ -198,7 +194,7 @@ class SalesOrderForm extends Component
                     } elseif (($this->items[$index]['quantity'] ?? 1) > $variant->stock_quantity) {
                         $this->items[$index]['quantity'] = $variant->stock_quantity;
                     } elseif (($this->items[$index]['quantity'] ?? 0) == 0 && $variant->stock_quantity > 0) {
-                         $this->items[$index]['quantity'] = 1;
+                        $this->items[$index]['quantity'] = 1;
                     }
                 } else {
                     $this->items[$index]['price_per_unit'] = 0.000;
@@ -219,11 +215,10 @@ class SalesOrderForm extends Component
     {
         $this->total_amount = 0;
         foreach ($this->items as $item) {
-            $quantity = $item['quantity'] ?? 0;
-            $price = $item['price_per_unit'] ?? 0.000;
-            if (is_numeric($quantity) && is_numeric($price)) {
-                $this->total_amount += $quantity * $price;
-            }
+            $quantity = (int)($item['quantity'] ?? 0);
+            $price = (float)$item['price_per_unit'] ?? 0.000;
+
+            $this->total_amount += $quantity * $price;
         }
     }
 
@@ -237,14 +232,14 @@ class SalesOrderForm extends Component
 
             if ($isNewOrder) {
                 $this->salesOrderInstance = new SalesOrder();
-                if(empty($this->salesOrderInstance->order_number) && empty($this->order_number)){
+                if (empty($this->salesOrderInstance->order_number) && empty($this->order_number)) {
                     $this->generateOrderNumber();
                 }
-                 $this->salesOrderInstance->order_number = $this->order_number;
+                $this->salesOrderInstance->order_number = $this->order_number;
             }
 
-            if(!empty($this->order_number) && $this->order_number !== $this->salesOrderInstance->order_number) {
-                 $this->salesOrderInstance->order_number = $this->order_number;
+            if (!empty($this->order_number) && $this->order_number !== $this->salesOrderInstance->order_number) {
+                $this->salesOrderInstance->order_number = $this->order_number;
             }
 
             $this->salesOrderInstance->channel = $this->channel;
@@ -311,7 +306,6 @@ class SalesOrderForm extends Component
                     }
                 }
             }
-
         });
 
         session()->flash('message', 'Sales Order #' . $this->salesOrderInstance->order_number . ($this->salesOrderInstance->wasRecentlyCreated && !$this->salesOrderInstance->wasChanged(['id']) ? ' created' : ' updated') . ' successfully.');

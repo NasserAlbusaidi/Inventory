@@ -12,6 +12,7 @@ use App\Models\Location;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 
 class PurchaseOrderForm extends Component
@@ -276,6 +277,10 @@ class PurchaseOrderForm extends Component
                 $this->purchaseOrderInstance->items()->whereNotIn('id', $currentItemIds)->delete();
             }
         });
+
+        // clear all cached data
+        cache::forget('dashboard_data');
+
 
         session()->flash('message', 'Purchase Order ' . ($this->purchaseOrderInstance->wasRecentlyCreated ? 'created' : 'updated') . ' successfully.');
         return redirect()->route('purchase-orders.index'); // Adjust route name if different
