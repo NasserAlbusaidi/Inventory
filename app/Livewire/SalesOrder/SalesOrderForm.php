@@ -34,8 +34,8 @@ class SalesOrderForm extends Component
     public Collection $allLocations;
     public Collection $allProductVariants;
 
-    public $soChannels = ['shopify', 'boutique', 'other'];
-    public $soStatuses = ['pending', 'processing', 'completed', 'shipped', 'cancelled', 'refunded'];
+    public $soChannels = ['Website', 'Instagram', 'boutique', 'other'];
+    public $soStatuses = ['pending', 'processing', 'completed', 'refunded'];
 
 
     protected function rules(): array
