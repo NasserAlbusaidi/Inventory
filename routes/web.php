@@ -22,6 +22,7 @@ use App\Livewire\Expense\RecurringExpenseForm;
 
 // Dashboard Route
 // This is the route to your NEW Livewire component
+Route::get('/', App\Livewire\Dashboard::class)->name('home');
 Route::get('/dashboard', App\Livewire\Dashboard::class)->name('dashboard');
 Route::post('/dashboard', [DashboardController::class, 'updateMonthlyTarget'])->name('dashboard.update-monthly-target');
 
