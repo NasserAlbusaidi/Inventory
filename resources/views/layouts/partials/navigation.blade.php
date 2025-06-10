@@ -1,8 +1,10 @@
 <nav x-data="{ openMobileMenu: false }"
     class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-40">
+    <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex items-center">
+                <!-- Logo -->
                 <div class="flex-shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
                         <h1
@@ -12,6 +14,7 @@
                     </a>
                 </div>
 
+                <!-- Desktop Navigation Links -->
                 <div class="hidden sm:-my-px sm:ms-24 sm:flex sm:space-x-8">
                     @foreach ($navigation as $item)
                         <x-dropdown align="left" width="56" :active="request()->routeIs($item['routes'])">
@@ -28,9 +31,8 @@
                 </div>
             </div>
 
+            <!-- Desktop Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
-
-
                 @auth
                     <div class="ml-3 relative">
                         <x-dropdown align="right" width="48">
@@ -61,6 +63,7 @@
                 @endauth
             </div>
 
+            <!-- Hamburger -->
             <div class="-me-2 flex items-center sm:hidden">
                 <button @click="openMobileMenu = ! openMobileMenu"
                     class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out"
@@ -76,5 +79,45 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- Mobile menu, show/hide based on menu state. -->
+    <div :class="{'block': openMobileMenu, 'hidden': ! openMobileMenu}" class="sm:hidden" id="mobile-menu">
+        <div class="pt-2 pb-3 space-y-1">
+            @foreach ($navigation as $item)
+                <div class="px-2 pt-2 pb-1">
+                     <!-- Mobile Parent Link (not clickable) -->
+                    <h3 class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 dark:text-gray-400">
+                        {{ __($item['name']) }}
+                    </h3>
+                     <!-- Mobile Child Links -->
+                    @foreach ($item['children'] as $child)
+                        <x-responsive-nav-link :href="route($child['route'])" :active="request()->routeIs($child['active'] ?? $child['route'])">
+                            {{ __($child['name']) }}
+                        </x-responsive-nav-link>
+                    @endforeach
+                </div>
+            @endforeach
+        </div>
+
+        <!-- Responsive Settings Options -->
+        @auth
+            <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
+                <div class="px-4">
+                    <div class="font-medium text-base text-gray-800 dark:text-gray-200">{{ Auth::user()->name }}</div>
+                    <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
+                </div>
+
+                <div class="mt-3 space-y-1">
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <x-responsive-nav-link :href="route('logout')"
+                            onclick="event.preventDefault(); this.closest('form').submit();">
+                            {{ __('Log Out') }}
+                        </x-responsive-nav-link>
+                    </form>
+                </div>
+            </div>
+        @endauth
     </div>
 </nav>
