@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+
 
 class SalesOrderItem extends Model
 {
@@ -12,7 +14,8 @@ class SalesOrderItem extends Model
 
     protected $fillable = [
         'sales_order_id',
-        'product_variant_id',
+        'saleable_type',
+        'saleable_id',
         'quantity',
         'price_per_unit',
         'price',
@@ -33,8 +36,8 @@ class SalesOrderItem extends Model
     /**
      * Get the product variant for the item.
      */
-    public function productVariant(): BelongsTo
+    public function saleable(): MorphTo
     {
-        return $this->belongsTo(ProductVariant::class);
+        return $this->morphTo();
     }
 }

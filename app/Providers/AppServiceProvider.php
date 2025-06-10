@@ -3,6 +3,11 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\PurchaseOrder;
+use App\Observers\PurchaseOrderObserver;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\SettingsService;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        PurchaseOrder::observe(PurchaseOrderObserver::class);
+        Relation::morphMap([
+            'product' => Product::class,
+            'variant' => ProductVariant::class,
+        ]);
     }
 }

@@ -10,6 +10,7 @@ use App\Livewire\Category\CategoryForm;
 use App\Livewire\Location\LocationList;
 use App\Livewire\Location\LocationForm;
 use App\Livewire\Supplier\SupplierList;
+use App\Livewire\Dashboard;
 use App\Livewire\Supplier\SupplierForm;
 use App\Livewire\Inventory\StockAdjustmentForm;
 use App\Livewire\PurchaseOrder\PurchaseOrderList;
@@ -20,7 +21,8 @@ use App\Livewire\Expense\RecurringExpenseList;
 use App\Livewire\Expense\RecurringExpenseForm;
 
 // Dashboard Route
-Route::get('/', DashboardController::class)->name('dashboard');
+// This is the route to your NEW Livewire component
+Route::get('/dashboard', App\Livewire\Dashboard::class)->name('dashboard');
 Route::post('/dashboard', [DashboardController::class, 'updateMonthlyTarget'])->name('dashboard.update-monthly-target');
 
 // Product Form Routes

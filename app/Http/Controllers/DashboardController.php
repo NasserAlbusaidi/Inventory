@@ -18,6 +18,8 @@ class DashboardController extends Controller
 {
     public function __invoke(Request $request)
     {
+
+        dd('Dashboard is under construction. Please check back later.');
         $endDate = Carbon::now();
         $startDate = $endDate->copy()->subDays(29)->startOfDay();
 
@@ -113,6 +115,7 @@ class DashboardController extends Controller
 
         $purchaseOrdersCountLast30Days = PurchaseOrder::where('status', 'Received')
             ->whereBetween('created_at', [$startDate, $endDate])->count();
+            dd($purchaseOrdersCountLast30Days);
         $purchaseOrdersCountPrev30Days = PurchaseOrder::where('status', 'Received')
             ->whereBetween('created_at', [$prevStartDate, $prevEndDate])->count();
         $purchaseOrdersCountChangePercentage = $purchaseOrdersCountPrev30Days != 0

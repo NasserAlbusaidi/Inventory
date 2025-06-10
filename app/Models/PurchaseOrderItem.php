@@ -12,7 +12,8 @@ class PurchaseOrderItem extends Model
 
     protected $fillable = [
         'purchase_order_id',
-        'product_variant_id',
+        'purchasable_type',
+        'purchasable_id',
         'quantity',
         'cost_price_per_unit',
     ];
@@ -32,8 +33,22 @@ class PurchaseOrderItem extends Model
     /**
      * Get the product variant for the item.
      */
+    public function purchasable(): BelongsTo
+    {
+        return $this->morphTo();
+    }
+    /**
+     * Get the product variant that owns the item.
+     */
     public function productVariant(): BelongsTo
     {
-        return $this->belongsTo(ProductVariant::class);
+        return $this->morphTo(__FUNCTION__, 'purchasable_type', 'purchasable_id');
+    }
+    /**
+     * Get the product that owns the item.
+     */
+    public function product(): BelongsTo
+    {
+        return $this->morphTo(__FUNCTION__, 'purchasable_type', 'purchasable_id');
     }
 }

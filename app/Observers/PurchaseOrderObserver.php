@@ -4,117 +4,78 @@ namespace App\Observers;
 
 use App\Models\PurchaseOrder;
 use App\Models\InventoryMovement;
+use App\Models\Product;          // <-- Import the Product model
 use App\Models\ProductVariant;
-use Illuminate\Support\Facades\Auth; // To get the currently authenticated user
+use Illuminate\Support\Facades\Auth;
+use App\Models\LocationInventory;
 use Illuminate\Support\Facades\Log;
 
 class PurchaseOrderObserver
 {
     /**
-     * Handle the PurchaseOrder "updated" event.
-     *
-     * @param  \App\Models\PurchaseOrder  $purchaseOrder
-     * @return void
-     */
-    public function updated(PurchaseOrder $purchaseOrder)
-    {
-        if ($purchaseOrder->isDirty('status') && $purchaseOrder->status === 'received') {
-            Log::info("Purchase Order #{$purchaseOrder->order_number} status changed to received. Processing stock updates.");
-
-            // Eager load items if not already loaded to avoid N+1 queries
-            $purchaseOrder->loadMissing('items.productVariant'); // Ensures items and their variants are loaded
-
-            foreach ($purchaseOrder->items as $item) {
-                // $variant = ProductVariant::find($item->product_variant_id); // This would be an N+1 query if items.productVariant wasn't loaded
-                $variant = $item->productVariant; // Access via loaded relationship
-
-                if ($variant) {
-                    $quantityToAdd = $item->quantity;
-                    $variant->increment('stock_quantity', $quantityToAdd);
-                    Log::info("Stock updated for Variant ID {$variant->id}. Added {$quantityToAdd}. New stock: {$variant->stock_quantity}");
-
-                    InventoryMovement::create([
-                        'product_variant_id' => $item->product_variant_id,
-                        'location_id' => $purchaseOrder->receiving_location_id, // Needs a receiving location
-                        'type' => 'purchase_receipt',
-                        'quantity' => $quantityToAdd,
-                        'reason' => 'Received from PO #' . $purchaseOrder->order_number,
-                        'referenceable_id' => $purchaseOrder->id,
-                        'referenceable_type' => PurchaseOrder::class, // Correct
-                        'user_id' => Auth::id(),
-                    ]);
-                    Log::info("Inventory movement created for Variant ID {$variant->id} from PO #{$purchaseOrder->order_number}.");
-
-                } else {
-                    // Corrected Log::error usage
-                    Log::error("Product Variant ID {$item->product_variant_id} not found for PO Item ID {$item->id} on PO #{$purchaseOrder->order_number}.");
-                }
-            }
-        }
-    }
-
-    /**
      * Handle the PurchaseOrder "created" event.
+     * This runs when a new PO is created.
      */
     public function created(PurchaseOrder $purchaseOrder): void
     {
-        // if the order is created and the status is received, we can assume stock is added
-        if ($purchaseOrder->status === 'received') {
-            Log::info("Purchase Order #{$purchaseOrder->order_number} created with status received. Processing stock updates.");
+        // // If a PO is created with the status 'received' right away
+        // if ($purchaseOrder->status === 'received') {
+        //     Log::info("PO #{$purchaseOrder->order_number} created with status 'received'. Processing stock updates.");
+        //     $this->handleStockUpdate($purchaseOrder);
+        // }
+    }
 
-            // Eager load items if not already loaded to avoid N+1 queries
-            $purchaseOrder->loadMissing('items.productVariant'); // Ensures items and their variants are loaded
+    /**
+     * Handle the PurchaseOrder "updated" event.
+     * This runs when an existing PO is updated.
+     */
+    public function updated(PurchaseOrder $purchaseOrder)
+    {
+        // // Only run the logic if the 'status' field was changed TO 'received'
+        // if ($purchaseOrder->isDirty('status') && $purchaseOrder->status === 'received') {
+        //     Log::info("PO #{$purchaseOrder->order_number} updated to status 'received'. Processing stock updates.");
+        //     $this->handleStockUpdate($purchaseOrder);
+        // }
+    }
 
-            foreach ($purchaseOrder->items as $item) {
-                $variant = $item->productVariant; // Access via loaded relationship
+    /**
+     * A helper method to handle the actual stock and inventory movement logic.
+     * This avoids repeating code in both created() and updated().
+     *
+     * @param PurchaseOrder $purchaseOrder
+     * @return void
+     */
+    private function handleStockUpdate(PurchaseOrder $purchaseOrder)
+    {
+        Log::info("PO #{$purchaseOrder->order_number} received. Processing stock updates.");
+        $purchaseOrder->loadMissing('items.purchasable');
 
-                if ($variant) {
-                    $quantityToAdd = $item->quantity;
-                    $variant->increment('stock_quantity', $quantityToAdd);
-                    Log::info("Stock updated for Variant ID {$variant->id}. Added {$quantityToAdd}. New stock: {$variant->stock_quantity}");
+        // Get the location where the items are being received.
+        $locationId = $purchaseOrder->receiving_location_id;
+        if (!$locationId) {
+            Log::error("Cannot update stock for PO #{$purchaseOrder->order_number}. No receiving location set.");
+            return; // Stop if there's no location
+        }
 
-                    InventoryMovement::create([
-                        'product_variant_id' => $item->product_variant_id,
-                        'location_id' => $purchaseOrder->receiving_location_id, // Needs a receiving location
-                        'type' => 'purchase_receipt',
-                        'quantity' => $quantityToAdd,
-                        'reason' => 'Received from PO #' . $purchaseOrder->order_number,
-                        'referenceable_id' => $purchaseOrder->id,
-                        'referenceable_type' => PurchaseOrder::class, // Correct
-                        'user_id' => Auth::id(),
-                    ]);
-                    Log::info("Inventory movement created for Variant ID {$variant->id} from PO #{$purchaseOrder->order_number}.");
+        foreach ($purchaseOrder->items as $item) {
+            $purchasable = $item->purchasable;
+            if ($purchasable) {
+                // Find or create the specific inventory record for this item at this location.
+                $inventoryRecord = LocationInventory::firstOrCreate(
+                    [
+                        'inventoriable_type' => get_class($purchasable),
+                        'inventoriable_id'   => $purchasable->id,
+                        'location_id'        => $locationId,
+                    ]
+                    // The stock_quantity will default to 0 if it's a new record.
+                );
 
-                } else {
-                    Log::error("Product Variant ID {$item->product_variant_id} not found for PO Item ID {$item->id} on PO #{$purchaseOrder->order_number}.");
-                }
+                // Add the new quantity to the existing stock at this location.
+                $inventoryRecord->increment('stock_quantity', $item->quantity);
+
+                Log::info("Stock for " . class_basename($purchasable) . " #{$purchasable->id} updated at Location #{$locationId}. New stock: {$inventoryRecord->stock_quantity}");
             }
         }
     }
-
-
-    /**
-     * Handle the PurchaseOrder "deleted" event.
-     */
-    public function deleted(PurchaseOrder $purchaseOrder): void
-    {
-        // If a PO is deleted, you might want to reverse stock movements if it was received.
-        // This can get complex and depends on your business rules (e.g., can't delete received POs).
-    }
-
-    /**
-     * Handle the PurchaseOrder "restored" event.
-     */
-    public function restored(PurchaseOrder $purchaseOrder): void
-    {
-        //
-    }
-
-    /**
-     * Handle the PurchaseOrder "force deleted" event.
-     */
-    public function forceDeleted(PurchaseOrder $purchaseOrder): void
-    {
-        //
-    }
+    // ... other observer methods like deleted() can remain empty for now ...
 }

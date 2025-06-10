@@ -24,7 +24,7 @@ class ProductVariant extends Model
 
 
 
-     /**
+    /**
      * @var array
      */
     protected $appends = ['full_name_with_variant'];
@@ -47,19 +47,11 @@ class ProductVariant extends Model
     }
 
     /**
-     * Get the sales order items for the product variant.
-     */
-    public function salesOrderItems(): HasMany
-    {
-        return $this->hasMany(SalesOrderItem::class);
-    }
-
-    /**
      * Get the purchase order items for the product variant.
      */
-    public function purchaseOrderItems(): HasMany
+    public function purchaseOrderItems()
     {
-        return $this->hasMany(PurchaseOrderItem::class);
+        return $this->morphMany(PurchaseOrderItem::class, 'purchasable');
     }
 
     /**
@@ -98,4 +90,15 @@ class ProductVariant extends Model
 
         return "{$productName} - {$this->variant_name} (SKU: {$sku})";
     }
+
+    public function salesOrderItems()
+    {
+        return $this->morphMany(SalesOrderItem::class, 'saleable');
+    }
+
+    public function locationInventories()
+    {
+        return $this->morphMany(LocationInventory::class, 'inventoriable');
+    }
+
 }

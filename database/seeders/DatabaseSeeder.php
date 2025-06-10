@@ -40,7 +40,11 @@ class DatabaseSeeder extends Seeder
         $locations = Location::factory(3)->create(); //
 
         // Create Suppliers
-        $suppliers = Supplier::factory(5)->create(); //
+        $suppliers = Supplier::factory(1)->create(
+            [ // You can adjust the number of suppliers as needed
+                'name' => 'Default Supplier'
+            ]
+        );
 
         // Create Categories (if you create a CategoryFactory and use the string field in Product)
         // Or, if you've transitioned Product to use category_id:

@@ -41,4 +41,10 @@ class Location extends Model
     {
         return $this->hasMany(RecurringExpense::class);
     }
+
+    public function inventories()
+    {
+        // A location has many inventory stock records.
+        return $this->hasMany(LocationInventory::class);
+    }
 }
