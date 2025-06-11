@@ -165,10 +165,7 @@
                                             <span
                                                 class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span>
                                         @enderror
-                                        @if ($variant['id'])
-                                            <p class="help-text">Stock for existing variants is managed via POs and
-                                                adjustments.</p>
-                                        @endif
+
 
                                     </div>
                                     <div class="flex items-end space-x-2">
@@ -252,10 +249,7 @@
                             @error('initial_stock')
                                 <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span>
                             @enderror
-                            @if ($product->exists)
-                                <p class="text-xs text-gray-500 mt-1">Stock is managed via Purchase Orders and
-                                    Adjustments after creation.</p>
-                            @endif
+
                         </div>
                         <div>
                             <label for="barcode"
