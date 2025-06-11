@@ -11,7 +11,7 @@ use App\Models\ProductVariant;
 use App\Models\Location;
 use Livewire\Component;
 use Illuminate\Support\Collection;
-
+use App\Models\InventoryMovement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -54,7 +54,7 @@ class PurchaseOrderForm extends Component
             'order_date' => 'required|date',
             'status' => 'required|in:' . implode(',', $this->poStatuses),
             'items' => 'required|array|min:1',
-            'receiving_location_id' => 'required_if:status,received|nullable|exists:locations,id',
+            'receiving_location_id' => 'required|nullable|exists:locations,id',
         ];
 
         foreach ($this->items as $index => $item) {
@@ -240,6 +240,8 @@ class PurchaseOrderForm extends Component
                 }
             }
         }
+        $this->calculateTotalAmount();
+
 
         if (preg_match('/items\.(\d+)\.(quantity|cost_price_per_unit)/', $propertyName)) {
             $this->calculateTotalAmount();
@@ -262,89 +264,84 @@ class PurchaseOrderForm extends Component
     {
         $this->validate();
 
-        // Use a variable to track if stock was successfully updated
         $stockUpdated = false;
 
         DB::transaction(function () use (&$stockUpdated) {
-            $isNewOrder = !$this->purchaseOrderInstance->exists;
-
-            // **CRITICAL:** Get the status *before* any changes are made
+            $isNewOrder = !$this->purchaseOrderInstance?->exists;
             $originalStatus = $isNewOrder ? null : $this->purchaseOrderInstance->getOriginal('status');
 
-            // Prepare the data to be saved to the PurchaseOrder model
             $poData = [
                 'supplier_id' => $this->supplier_id,
-                'order_number' => $this->order_number ?: $this->generateOrderNumber(true), // Generate if needed
+                'order_number' => $this->order_number ?: $this->generateOrderNumber(true),
                 'order_date' => $this->order_date,
                 'receiving_location_id' => $this->receiving_location_id,
                 'status' => $this->status,
-                'total_amount' => $this->calculateTotalAmount(true), // Recalculate just in case
+                'total_amount' => $this->calculateTotalAmount(true),
             ];
 
-            // Use updateOrCreate for the main PO record. It's clean and handles both new/edit cases.
             $this->purchaseOrderInstance = PurchaseOrder::updateOrCreate(
-                ['id' => $this->purchaseOrderInstance->id],
+                ['id' => $this->purchaseOrderInstance?->id],
                 $poData
             );
 
-            // --- Save Items ---
+            // Item saving logic is fine...
             $currentItemIds = [];
             foreach ($this->items as $itemData) {
                 if (empty($itemData['selected_item_key'])) continue;
-
                 list($type, $id) = explode('_', $itemData['selected_item_key']);
-                $purchasableType = match (strtolower($type)) {
-                    'product'        => 'product',
-                    'productvariant' => 'variant', // This handles your `ProductVariant` model name
-                    'variant'        => 'variant',
-                    default => throw new \Exception("Unknown purchasable type: {$type}"),
-                };
-                $purchasableId = (int)$id;
-
-                $itemPayload = [
-                    'quantity' => $itemData['quantity'],
-                    'cost_price_per_unit' => $itemData['cost_price_per_unit'],
-                ];
-
+                $morphAlias = ($type === 'ProductVariant') ? 'variant' : 'product';
                 $poItem = $this->purchaseOrderInstance->items()->updateOrCreate(
-                    ['purchasable_type' => $purchasableType, 'purchasable_id' => $purchasableId],
-                    $itemPayload
+                    [
+                        'purchasable_type' => $morphAlias,
+                        'purchasable_id' => (int)$id
+                    ],
+                    [
+                        'quantity' => $itemData['quantity'],
+                        'cost_price_per_unit' => $itemData['cost_price_per_unit'],
+                    ]
                 );
                 $currentItemIds[] = $poItem->id;
             }
-
-            // Delete removed items if this was an edit
             if (!$isNewOrder) {
                 $this->purchaseOrderInstance->items()->whereNotIn('id', $currentItemIds)->delete();
             }
 
-            // --- STOCK UPDATE LOGIC ---
-
-            // The status of the model *after* saving
+            // --- 3. REVISED STOCK UPDATE LOGIC ---
             $currentStatus = $this->purchaseOrderInstance->status;
             $locationId = $this->purchaseOrderInstance->receiving_location_id;
 
-            // Condition: The status must now be 'received' and it must NOT have been 'received' before.
-            // This prevents double-counting if you save a 'received' order multiple times.
             if ($currentStatus === 'received' && $originalStatus !== 'received' && $locationId) {
                 Log::info("PO #{$this->purchaseOrderInstance->order_number}: Status changed to 'received'. Processing stock updates.");
 
-                // Loop through the items we just saved. Use fresh() to get the latest from DB.
                 foreach ($this->purchaseOrderInstance->fresh()->items as $item) {
                     $purchasable = $item->purchasable;
                     if ($purchasable) {
+                        // Step A: Update the snapshot table
                         $inventoryRecord = LocationInventory::firstOrCreate(
                             [
+                                // IMPORTANT: Ensure these column names match your actual table schema
                                 'inventoriable_type' => $purchasable->getMorphClass(),
                                 'inventoriable_id'   => $purchasable->id,
-                                'location_id'        => $locationId,
-                            ]
+                                'location_id'   => $locationId,
+                            ],
+                            ['stock_quantity' => 0] // Default value if new
                         );
                         $inventoryRecord->increment('stock_quantity', $item->quantity);
+
+                        // Step B: Create the permanent ledger/audit trail record
+                        InventoryMovement::create([
+                            'itemable_type' => $purchasable->getMorphClass(), // Use the correct field name
+                            'itemable_id'   => $purchasable->id,             // Use the correct field name
+                            'location_id'   => $locationId,
+                            'quantity'      => $item->quantity,
+                            'type'          => 'purchase',
+                            'related_type'  => PurchaseOrder::class,
+                            'related_id'    => $this->purchaseOrderInstance->id,
+                        ]);
+
                         Log::info("  - Stock for " . class_basename($purchasable) . " #{$purchasable->id} incremented by {$item->quantity} at Location #{$locationId}.");
                     }
                 }
-                // If we get here, the stock update logic ran.
                 $stockUpdated = true;
             } else {
                 // Log why the stock update was skipped

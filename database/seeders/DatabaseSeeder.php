@@ -13,11 +13,11 @@ use App\Models\InventoryMovement;
 use Illuminate\Support\Facades\Hash;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
+use App\Models\SalesChannel;
 use App\Models\Category;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
-
-
+use Illuminate\Support\Facades\Log;
 
 class DatabaseSeeder extends Seeder
 {
@@ -26,82 +26,76 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create a specific test user (as you had)
-        $defaultUser = User::factory()->create([ //
-            'name' => 'Nasser Albusaidi',
-            'email' => 'nasser@example.com', // Your email
-            'password' => Hash::make('password'), // Set a default password
+        // create sales channels
+        SalesChannel::firstOrCreate(['name' => 'Website']);
+        SalesChannel::firstOrCreate(['name' => 'Instagram']);
+        SalesChannel::firstOrCreate(['name' => 'WhatsApp']);
+        SalesChannel::firstOrCreate(['name' => 'Boutique Sale']);
+        SalesChannel::firstOrCreate(['name' => 'Other']);
+
+        Log::info('Sales channels created successfully.');
+        // create three locations
+        Location::firstOrCreate(['name' => 'Main Boutique', 'description' => '123 Main St, City, Country']);
+        Location::firstOrCreate(['name' => 'Warehouse', 'description' => '456 Warehouse Rd, City, Country']);
+        Location::firstOrCreate(['name' => 'Online Store', 'description' => 'N/A']);
+        Log::info('Locations created successfully.');
+        // create three suppliers
+        Supplier::firstOrCreate(['name' => 'Supplier A']);
+        Supplier::firstOrCreate(['name' => 'Supplier B']);
+        Supplier::firstOrCreate(['name' => 'Supplier C']);
+        Log::info('Suppliers created successfully.');
+        // create three categories
+        Category::firstOrCreate(['name' => 'Skincare']);
+        Category::firstOrCreate(['name' => 'Makeup']);
+        Category::firstOrCreate(['name' => 'Haircare']);
+
+        Log::info('Categories created successfully.');
+        // create three products
+        Product::firstOrCreate([
+            'name' => 'Moisturizer',
+            'description' => 'Hydrating moisturizer for all skin types.',
+            'sku' => 'MST-001',
+            'category_id' => 1, // Skincare
+            'has_variants' => true,
+        ]);
+        Product::firstOrCreate([
+            'name' => 'Lipstick',
+            'description' => 'Long-lasting lipstick in various shades.',
+            'sku' => 'LIP-001',
+            'category_id' => 2, // Makeup
+            'has_variants' => true,
+        ]);
+        Product::firstOrCreate([
+            'name' => 'Shampoo',
+            'description' => 'Gentle shampoo for daily use.',
+            'sku' => 'SHAM-001',
+            'category_id' => 3, // Haircare
+            'has_variants' => false,
+            'cost_price' => 10.00,
+        ]);
+        Log::info('Products created successfully.');
+        // create three product variants
+        ProductVariant::firstOrCreate([
+            'product_id' => 1, // Moisturizer
+            'variant_name' => '50ml',
+            'cost_price' => 10.00,
+            'selling_price' => 12.00,
+
+        ]);
+        ProductVariant::firstOrCreate([
+            'product_id' => 2, // Lipstick
+            'variant_name' => 'Red',
+            'cost_price' => 5.00,
+            'selling_price' => 8.00,
+        ]);
+        ProductVariant::firstOrCreate([
+            'product_id' => 2, // Lipstick
+            'variant_name' => '250ml',
+            'cost_price' => 15.00,
+            'selling_price' => 20.00,
         ]);
 
-        // Create a few other random users
-        User::factory(5)->create();
 
-        // Create Locations
-        $locations = Location::factory(3)->create(); //
-
-        // Create Suppliers
-        $suppliers = Supplier::factory(1)->create(
-            [ // You can adjust the number of suppliers as needed
-                'name' => 'Default Supplier'
-            ]
-        );
-
-        // Create Categories (if you create a CategoryFactory and use the string field in Product)
-        // Or, if you've transitioned Product to use category_id:
-        $categories = Category::factory(5)->create(); //
-
-        // Create Products, each with a few Variants
-        Product::factory(20)->create()->each(function ($product) use ($defaultUser, $locations, $categories) { // Pass $categories if needed by product factory logic directly, or ProductFactory can fetch them
-            $numberOfVariants = rand(1, 3);
-            for ($i = 0; $i < $numberOfVariants; $i++) {
-                $variant = ProductVariant::factory()->create([
-                    'product_id' => $product->id,
-                ]);
-
-                if ($variant->stock_quantity > 0) {
-                    InventoryMovement::factory()->create([
-                        'product_variant_id' => $variant->id,
-                        'location_id' => $locations->random()->id,
-                        'type' => 'adjustment',
-                        'quantity' => $variant->stock_quantity,
-                        'reason' => 'Initial stock seeding',
-                        'user_id' => $defaultUser->id,
-                    ]);
-                }
-            }
-        });
-
-        // Placeholder for Purchase Orders and Sales Orders (requires more detailed factories)
-        // Example:
-        PurchaseOrder::factory(10)->create(['supplier_id' => $suppliers->random()->id])->each(function ($po) use ($defaultUser, $locations) {
-            $productVariants = ProductVariant::inRandomOrder()->take(rand(1,5))->get();
-            foreach($productVariants as $variant) {
-                PurchaseOrderItem::factory()->create([
-                    'purchase_order_id' => $po->id,
-                    'product_variant_id' => $variant->id,
-                    'cost_price_per_unit' => $variant->cost_price, // Use variant's cost price
-                ]);
-                // Potentially create an 'in' InventoryMovement when PO is 'received'
-            }
-        });
-
-        SalesOrder::factory(15)->create(['location_id' => $locations->random()->id])->each(function ($so) use ($defaultUser, $locations){
-            $productVariants = ProductVariant::where('stock_quantity', '>', 0)->inRandomOrder()->take(rand(1,3))->get();
-             foreach($productVariants as $variant) {
-                if ($variant->stock_quantity > 0) {
-                    $quantitySold = rand(1, min(5, $variant->stock_quantity)); // Sell between 1 and 5, or available stock
-                    SalesOrderItem::factory()->create([
-                        'sales_order_id' => $so->id,
-                        'product_variant_id' => $variant->id,
-                        'quantity' => $quantitySold,
-                        'price_per_unit' => $variant->selling_price, // Use variant's selling price
-                    ]);
-                    // Decrease stock and create 'out' InventoryMovement
-                    // $variant->decrement('stock_quantity', $quantitySold);
-                    // InventoryMovement::factory()->create([ /* ... type 'out' ... */ ]);
-                }
-            }
-        });
 
         $this->command->info('Dummy data seeded successfully!');
     }

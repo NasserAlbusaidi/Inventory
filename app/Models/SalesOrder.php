@@ -13,7 +13,7 @@ class SalesOrder extends Model
 
     protected $fillable = [
         'order_number',
-        'channel',
+        'sales_channel_id',
         'location_id',
         'price',
         'order_date',
@@ -34,6 +34,14 @@ class SalesOrder extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    /**
+     * Get the sales channel associated with the sales order.
+     */
+    public function salesChannel(): BelongsTo
+    {
+        return $this->belongsTo(SalesChannel::class);
     }
 
     /**

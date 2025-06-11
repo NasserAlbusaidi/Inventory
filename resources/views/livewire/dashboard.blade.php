@@ -81,9 +81,39 @@
                 </div>
             </div>
 
-            {{-- Financial Summary Section --}}
             <div class="space-y-2">
-                <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200">Financial Summary</h2>
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                    <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200">Financial Summary</h2>
+
+                    <div class="flex items-center space-x-3">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            Last updated: {{ $lastUpdated->diffForHumans() }}
+                        </span>
+                        <button wire:click="refreshData" wire:loading.attr="disabled"
+                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-wait">
+
+                            {{-- Loading spinner, shown only when 'refreshData' is running --}}
+                            <svg wire:loading wire:target="refreshData" class="animate-spin -ml-1 mr-2 h-4 w-4"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+
+                            {{-- Refresh icon, shown when not loading --}}
+                            <svg wire:loading.remove wire:target="refreshData" xmlns="http://www.w3.org/2000/svg"
+                                class="h-4 w-4 -ml-1 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M4 4v5h5M20 20v-5h-5M4 4l5 5M20 20l-5-5"></path>
+                            </svg>
+
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {{-- Total Revenue Card --}}
                     <x-card>
@@ -254,7 +284,7 @@
                                 </svg>
                             </x-slot:icon>
                         </x-kpi-card>
-                         {{-- Average Order Value --}}
+                        {{-- Average Order Value --}}
                         <x-kpi-card title="Average Order Value"
                             value="OMR {{ number_format($averageOrderValue ?? 0, 2) }}" color="green"
                             changeText="in selected period">
@@ -281,7 +311,7 @@
                                 </svg>
                             </x-slot:icon>
                         </x-kpi-card>
-                         {{-- New Card 2: Repeat Customer Rate --}}
+                        {{-- New Card 2: Repeat Customer Rate --}}
                         <x-kpi-card title="Repeat Customer Rate"
                             value="{{ number_format($repeatCustomerRate ?? 0, 1) }}%" color="teal"
                             changeText="of customers returned">
@@ -499,7 +529,7 @@
                                         <span class="text-sm font-medium text-gray-800 dark:text-gray-100">OMR
                                             {{ number_format($order->total_amount, 2) }}</span>
                                         <span
-                                            class="px-2 py-0.5 text-xs font-medium rounded-full capitalize @switch($order->status) @case('completed') bg-green-100 text-green-700 @break @default bg-gray-100 text-gray-700 @endswitch">{{ str_replace('_', ' ', $order->status) }}</span>
+                                            class="px-2 py-0.5 text-xs font-medium rounded-full capitalize @switch($order->status) @case('fulfilled') bg-green-100 text-green-700 @break @default bg-gray-100 text-gray-700 @endswitch">{{ str_replace('_', ' ', $order->status) }}</span>
                                     </div>
                                 </div>
                             @empty

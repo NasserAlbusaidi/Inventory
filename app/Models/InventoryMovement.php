@@ -12,7 +12,8 @@ class InventoryMovement extends Model
     use HasFactory;
 
     protected $fillable = [
-        'product_variant_id',
+        'itemable_type',
+        'itemable_id',
         'location_id',
         'type',
         'quantity',
@@ -29,9 +30,20 @@ class InventoryMovement extends Model
     /**
      * Get the product variant associated with the movement.
      */
-    public function productVariant(): BelongsTo
+    public function itemable(): MorphTo
     {
-        return $this->belongsTo(ProductVariant::class);
+        return $this->morphTo();
+    }
+
+    /**
+     * Get the source document for the movement (can be a PurchaseOrder, SalesOrder, etc.).
+     * Renamed from 'referenceable' to 'related' to match standard conventions,
+     * but you can keep 'referenceable' if you prefer.
+     */
+    public function related(): MorphTo
+    {
+        // This assumes your column names are 'related_type' and 'related_id'
+        return $this->morphTo();
     }
 
     /**
@@ -42,16 +54,4 @@ class InventoryMovement extends Model
         return $this->belongsTo(Location::class);
     }
 
-    /**
-     * Get the user who performed the movement.
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class); // Assuming a User model exists
-    }
-
-    public function referenceable(): MorphTo
-    {
-        return $this->morphTo();
-    }
 }

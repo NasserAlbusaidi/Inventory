@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('order_number')->unique();
             $table->enum('channel', ['shopify', 'boutique', 'other']);
-            $table->foreignId('location_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('location_id')->nullable()->constrained()->onDelete('restrict');
             $table->date('order_date');
             $table->json('customer_details')->nullable();
             $table->decimal('total_amount', 10, 2);

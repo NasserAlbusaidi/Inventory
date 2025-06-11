@@ -29,9 +29,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         PurchaseOrder::observe(PurchaseOrderObserver::class);
-        Relation::morphMap([
-            'product' => Product::class,
-            'variant' => ProductVariant::class,
+        Relation::enforceMorphMap([
+            'product' => 'App\Models\Product',
+            'variant' => 'App\Models\ProductVariant',
+            'purchase_order' => 'App\Models\PurchaseOrder',
+            'sales_order' => 'App\Models\SalesOrder',
+            'location'       => 'App\Models\Location',
+            'sales_channel'  => 'App\Models\SalesChannel',
+            'category'      => 'App\Models\Category',
+            'supplier'      => 'App\Models\Supplier',
         ]);
     }
 }

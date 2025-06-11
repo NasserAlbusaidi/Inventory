@@ -23,6 +23,8 @@ class Dashboard extends Component
     public ?string $customEndDate = null;
     public int $updateCounter = 0;
 
+    public $lastUpdated;
+
 
     // Calculated date properties
     protected Carbon $startDate;
@@ -78,36 +80,43 @@ class Dashboard extends Component
         }
     }
 
+    public function refreshData()
+    {
+        $this->calculateDateRange();
+        $this->lastUpdated = now();
+        $this->updateCounter++;
+        // Clear the cache to ensure fresh data is fetched next time.
+        Cache::forget('dashboard_data');
+        $this->dispatch('refresh-dashboard');
+    }
+
     public function render()
     {
+         $this->lastUpdated = now();
+        // The cache key now includes the date range to ensure fresh data when dates change.
         $cacheKey = 'dashboard_data';
 
+        // Increased cache time slightly as this is a heavy query.
         $data = Cache::remember($cacheKey, now()->addMinutes(1), function () {
+
             // --- Date and Comparison Period Setup ---
             $durationInDays = $this->endDate->diffInDays($this->startDate);
             $prevEndDate = $this->startDate->copy()->subDay()->endOfDay();
             $prevStartDate = $prevEndDate->copy()->subDays($durationInDays)->startOfDay();
             $customerIdentifierJsonPath = 'customer_details->>"$.name"';
 
-            // --- Base Queries ---
-            $salesOrdersInPeriod = SalesOrder::whereBetween('created_at', [$this->startDate, $this->endDate]);
+            // --- Base Queries (with corrected table prefixes) ---
+            $salesOrdersInPeriod = SalesOrder::whereBetween('sales_orders.created_at', [$this->startDate, $this->endDate]);
+            $purchaseOrdersInPeriod = PurchaseOrder::whereBetween('purchase_orders.created_at', [$this->startDate, $this->endDate]);
 
             // --- Core Financial KPIs ---
             $totalRevenue = (clone $salesOrdersInPeriod)->sum('total_amount');
 
-            // (FIXED) Cost of Goods Sold
-            $salesOrderItemsForCost = SalesOrderItem::whereHas('salesOrder', fn($q) => $q->whereBetween('created_at', [$this->startDate, $this->endDate]))
-                ->with('saleable:id,cost_price,track_inventory')->get();
+            // Cost of Goods Sold (slightly optimized)
+            $salesOrderItemsForCost = SalesOrderItem::whereHas('salesOrder', fn($q) => $q->whereBetween('sales_orders.created_at', [$this->startDate, $this->endDate]))
+                ->with('saleable:id,cost_price')->get(); // Select only needed columns
 
-            $costOfGoodsSold = $salesOrderItemsForCost->sum(function ($item) {
-                if ($item->saleable && $item->saleable->track_inventory && $item->saleable->cost_price !== null) {
-                    return $item->quantity * $item->saleable->cost_price;
-                }
-                return 0;
-            });
-
-            $purchaseOrdersInPeriod = PurchaseOrder::whereBetween('created_at', [$this->startDate, $this->endDate]);
-
+            $costOfGoodsSold = $salesOrderItemsForCost->sum(fn($item) => $item->quantity * ($item->saleable->cost_price ?? 0));
 
             $operationalCost = RecurringExpense::where('start_date', '<=', $this->endDate)
                 ->where(fn($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $this->endDate))
@@ -118,74 +127,48 @@ class Dashboard extends Component
             $netProfit = $totalRevenue - $totalCost;
             $profitMargin = $totalRevenue > 0 ? ($netProfit / $totalRevenue) * 100 : 0;
 
-            // --- Sales KPIs & Comparisons ---
+            // --- Sales KPIs & Comparisons (with corrected table prefixes) ---
             $salesCount = (clone $salesOrdersInPeriod)->count();
-            $salesCountPrev = SalesOrder::whereBetween('created_at', [$prevStartDate, $prevEndDate])->count();
+            $salesCountPrev = SalesOrder::whereBetween('sales_orders.created_at', [$prevStartDate, $prevEndDate])->count();
             $salesCountChange = $salesCountPrev > 0 ? (($salesCount - $salesCountPrev) / $salesCountPrev) * 100 : ($salesCount > 0 ? 100 : 0);
 
-
-
-            $purchaseOrdersCount = PurchaseOrder::whereBetween('created_at', [$this->startDate, $this->endDate])->count();
-            $purchaseOrdersCountPrev = PurchaseOrder::whereBetween('created_at', [$prevStartDate, $prevEndDate])->count();
+            $purchaseOrdersCount = (clone $purchaseOrdersInPeriod)->count();
+            $purchaseOrdersCountPrev = PurchaseOrder::whereBetween('purchase_orders.created_at', [$prevStartDate, $prevEndDate])->count();
             $purchaseOrdersCountChange = $purchaseOrdersCountPrev > 0 ? (($purchaseOrdersCount - $purchaseOrdersCountPrev) / $purchaseOrdersCountPrev) * 100 : ($purchaseOrdersCount > 0 ? 100 : 0);
 
             $averageOrderValue = $salesCount > 0 ? $totalRevenue / $salesCount : 0;
             $averagePurchaseValue = $purchaseOrdersCount > 0 ? $totalPurchaseValue / $purchaseOrdersCount : 0;
 
-            // --- (NEW) Inventory Health KPIs ---
-            $deadStockCutoffDate = now()->subDays(90);
-
-            // Get the IDs of all items sold in the last 90 days
-            $soldItemIds = SalesOrderItem::whereHas('salesOrder', fn($q) => $q->where('created_at', '>=', $deadStockCutoffDate))
-                ->select('saleable_id', 'saleable_type')
-                ->distinct()
-                ->get()
-                ->map(fn($item) => $item->saleable_type . '_' . $item->saleable_id) // Create a unique key like 'App\Models\Product_1'
-                ->flip(); // Flip so we can use isset() for fast lookups
-
-            // Find inventory items that are NOT in the recently sold list
-            $deadStockItemsCount = LocationInventory::where('stock_quantity', '>', 0)
-                ->get()
-                ->filter(function ($inventory) use ($soldItemIds) {
-                    $key = $inventory->inventoriable_type . '_' . $inventory->inventoriable_id;
-                    return !isset($soldItemIds[$key]);
-                })
-                ->count();
-
-            // --- (NEW) Customer Loyalty KPI ---
-            $customerOrders = SalesOrder::whereBetween('created_at', [$this->startDate, $this->endDate])
-                ->select(DB::raw($customerIdentifierJsonPath . ' as customer_name'))
-                ->get()
-                ->groupBy('customer_name')
-                ->filter(fn($group) => $group->first()->customer_name !== null); // Filter out null/guest customers
-
-            $totalUniqueCustomers = $customerOrders->count();
-            $repeatCustomers = $customerOrders->filter(fn($orders) => $orders->count() > 1)->count();
-
-            $repeatCustomerRate = $totalUniqueCustomers > 0 ? ($repeatCustomers / $totalUniqueCustomers) * 100 : 0;
-
-            // Customer Count
-            $totalCustomersInPeriod = (clone $salesOrdersInPeriod)->selectRaw("COUNT(DISTINCT {$customerIdentifierJsonPath}) as count")->value('count');
-            $totalCustomersPrevPeriod = SalesOrder::whereBetween('created_at', [$prevStartDate, $prevEndDate])->selectRaw("COUNT(DISTINCT {$customerIdentifierJsonPath}) as count")->value('count');
+            // --- Customer Loyalty & Counts (with corrected table prefixes) ---
+            $totalCustomersInPeriod = (clone $salesOrdersInPeriod)->distinct(DB::raw($customerIdentifierJsonPath))->count(DB::raw($customerIdentifierJsonPath));
+            $totalCustomersPrevPeriod = SalesOrder::whereBetween('sales_orders.created_at', [$prevStartDate, $prevEndDate])->distinct(DB::raw($customerIdentifierJsonPath))->count(DB::raw($customerIdentifierJsonPath));
             $customerChangePercentage = $totalCustomersPrevPeriod > 0 ? (($totalCustomersInPeriod - $totalCustomersPrevPeriod) / $totalCustomersPrevPeriod) * 100 : ($totalCustomersInPeriod > 0 ? 100 : 0);
 
-            // --- (FIXED) Top Selling & Most Profitable Items ---
-            $allSoldItems = SalesOrderItem::whereHas('salesOrder', fn($q) => $q->whereBetween('created_at', [$this->startDate, $this->endDate]))
-                ->with(['saleable' => function ($morphTo) {
-                    $morphTo->morphWith([ProductVariant::class => ['product:id,name,sku']]);
-                }])->get();
+            $customerOrders = (clone $salesOrdersInPeriod)->select(DB::raw($customerIdentifierJsonPath . ' as customer_name'))->get()->groupBy('customer_name')->filter(fn($group) => $group->first()->customer_name !== null);
+            $repeatCustomers = $customerOrders->filter(fn($orders) => $orders->count() > 1)->count();
+            $repeatCustomerRate = $totalCustomersInPeriod > 0 ? ($repeatCustomers / $totalCustomersInPeriod) * 100 : 0;
 
-            $itemStats = $allSoldItems->groupBy(function ($item) {
-                if (!$item->saleable) return 'deleted_item';
-                return get_class($item->saleable) . '_' . $item->saleable->id;
-            })->map(function ($items) {
-                $firstItem = $items->first()->saleable;
-                if (!$firstItem) return null;
-                $displayName = ($firstItem instanceof ProductVariant) ? "{$firstItem->product->name} - {$firstItem->variant_name}" : $firstItem->name;
+            // --- Inventory Health KPIs (FIXED for MorphMap) ---
+            $deadStockCutoffDate = now()->subDays(90);
+            $soldItemKeys = SalesOrderItem::whereHas('salesOrder', fn($q) => $q->where('sales_orders.created_at', '>=', $deadStockCutoffDate))
+                ->select('saleable_id', 'saleable_type')->distinct()->get()
+                ->map(fn($item) => $item->saleable_type . '_' . $item->saleable_id)->flip();
+
+            $deadStockItemsCount = LocationInventory::where('stock_quantity', '>', 0)->get()
+                ->filter(fn($inv) => !isset($soldItemKeys[$inv->inventoriable_type . '_' . $inv->inventoriable_id]))->count();
+
+            // --- Top Selling & Most Profitable Items ---
+            $allSoldItems = SalesOrderItem::whereHas('salesOrder', fn($q) => $q->whereBetween('sales_orders.created_at', [$this->startDate, $this->endDate]))
+                ->with(['saleable' => fn($morphTo) => $morphTo->morphWith([ProductVariant::class => ['product:id,name,sku']])])->get();
+
+            $itemStats = $allSoldItems->groupBy('saleable_id_and_type')->map(function ($items) {
+                $firstItemSaleable = $items->first()->saleable;
+                if (!$firstItemSaleable) return null;
+                $displayName = ($firstItemSaleable instanceof ProductVariant) ? "{$firstItemSaleable->product->name} - {$firstItemSaleable->variant_name}" : $firstItemSaleable->name;
                 return [
                     'display_name' => $displayName,
                     'total_quantity_sold' => $items->sum('quantity'),
-                    'total_profit' => $items->sum(fn($i) => optional($firstItem)->cost_price !== null ? $i->quantity * ($i->price_per_unit - $firstItem->cost_price) : 0),
+                    'total_profit' => $items->sum(fn($i) => $i->quantity * ($i->price_per_unit - ($i->saleable->cost_price ?? 0))),
                 ];
             })->filter();
 
@@ -193,43 +176,45 @@ class Dashboard extends Component
             $mostProfitableItems = $itemStats->sortByDesc('total_profit')->where('total_profit', '>', 0)->take(7);
 
             // --- Recent Orders ---
-            $recentPurchases = PurchaseOrder::with(['supplier', 'items.purchasable' => fn($morphTo) => $morphTo->morphWith([ProductVariant::class => ['product:id,name'], Product::class => []])])->latest()->limit(5)->get();
-            $recentSales = SalesOrder::with(['items.saleable' => fn($morphTo) => $morphTo->morphWith([ProductVariant::class => ['product:id,name'], Product::class => []])])->latest()->limit(5)->get();
+            $recentPurchases = PurchaseOrder::with('supplier')->latest('order_date')->limit(5)->get();
+            $recentSales = SalesOrder::latest('order_date')->limit(5)->get();
 
-            // --- Settings --- //
-            $lowStockThreshold = app('settings')->get('low_stock_threshold', 5);
-            $monthlyTargetAmount = (float) app('settings')->get('monthly_revenue_target', 6000);
-            $profitMarginTarget = (float) app('settings')->get('profit_margin_target', 15);
-
-            $monthlyTargetAmount = (float) app('settings')->get('monthly_revenue_target', 6000);
-
-            // ALWAYS calculate revenue for the *current calendar month* for this specific KPI
-            $startOfMonth = now()->startOfMonth();
-            $endOfMonth = now()->endOfMonth();
-            $currentRevenueForMonth = SalesOrder::whereBetween('created_at', [$startOfMonth, $endOfMonth])->sum('total_amount');
-
-            // Calculate the percentage achieved based on the correct monthly revenue
+            // --- Settings & Targets ---
+            $settings = app('settings');
+            $lowStockThreshold = $settings->get('low_stock_threshold', 5);
+            $monthlyTargetAmount = (float) $settings->get('monthly_revenue_target', 6000);
+            $profitMarginTarget = (float) $settings->get('profit_margin_target', 15);
+            $currentRevenueForMonth = SalesOrder::whereBetween('sales_orders.created_at', [now()->startOfMonth(), now()->endOfMonth()])->sum('total_amount');
             $percentageAchieved = ($monthlyTargetAmount > 0) ? ($currentRevenueForMonth / $monthlyTargetAmount) * 100 : 0;
 
-            // --- Sales By Category ---
+            // --- Chart Data ---
+            $revenueOverTime = (clone $salesOrdersInPeriod)->select(DB::raw('DATE(sales_orders.created_at) as date'), DB::raw('SUM(total_amount) as total_revenue'))->groupBy('date')->orderBy('date')->get();
+
             $salesByCategory = $allSoldItems->groupBy(function ($item) {
                 if (!$item->saleable) return 'Other';
-                $product = ($item->saleable instanceof ProductVariant) ? $item->saleable->product : $item->saleable;
+
+                // This is the key part:
+                $product = ($item->saleable instanceof ProductVariant)
+                    ? $item->saleable->product // A. If it's a variant, get the parent product.
+                    : $item->saleable;         // B. If it's a simple product, use it directly.
+
+                // Then, try to get the category name from that product.
                 return optional($product->category)->name ?? 'Uncategorized';
             })->map(fn($items) => $items->sum(fn($i) => $i->quantity * $i->price_per_unit))->sortDesc()->take(5);
 
-            // --- Inventory Stats ---
             $inventoryValueByCategory = LocationInventory::with(['inventoriable' => fn($morphTo) => $morphTo->morphWith([ProductVariant::class => ['product.category'], Product::class => ['category']])])
                 ->get()->groupBy(fn($inv) => optional(optional($inv->inventoriable)->product ?? $inv->inventoriable)->category->name ?? 'Uncategorized')
                 ->map(fn($invs) => $invs->sum(fn($inv) => $inv->stock_quantity * (optional($inv->inventoriable)->cost_price ?? 0)))
                 ->filter(fn($val) => $val > 0)->sortDesc()->take(5);
 
             $lowStockItemsCount = LocationInventory::where('stock_quantity', '<=', $lowStockThreshold)->where('stock_quantity', '>', 0)->count();
-            $percentageAchieved = ($monthlyTargetAmount > 0) ? ($totalRevenue / $monthlyTargetAmount) * 100 : 0;
 
-            // --- Chart Data & Other Stats ---
-            $revenueOverTime = (clone $salesOrdersInPeriod)->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as total_revenue'))->groupBy('date')->orderBy('date')->get();
-            $salesByChannel = (clone $salesOrdersInPeriod)->select('channel', DB::raw('COUNT(*) as count'))->groupBy('channel')->get();
+            // (FIXED) Sales By Channel Query
+            $salesByChannel = (clone $salesOrdersInPeriod)
+                ->join('sales_channels', 'sales_orders.sales_channel_id', '=', 'sales_channels.id')
+                ->select('sales_channels.name as channel_name', DB::raw('COUNT(sales_orders.id) as count'))
+                ->groupBy('sales_channels.name')->orderBy('count', 'desc')->get();
+
             $pendingPOCount = PurchaseOrder::where('status', 'ordered')->count();
 
             // --- Assembling the final data array ---
@@ -258,31 +243,26 @@ class Dashboard extends Component
                 'repeatCustomerRate' => $repeatCustomerRate,
                 'averagePurchaseValue' => $averagePurchaseValue,
 
-                // settings
                 'profitMarginTarget' => $profitMarginTarget,
                 'monthlyTargetAmount' => $monthlyTargetAmount,
                 'currentRevenueForMonth' => $currentRevenueForMonth,
                 'percentageAchieved' => $percentageAchieved,
-                'monthlyTargetChartData' => [
-                    min(100, round($percentageAchieved, 2)), // Cap at 100% for the 'achieved' part
-                    max(0, 100 - round($percentageAchieved, 2)) // The 'remaining' part
-                ],
+                'monthlyTargetChartData' => [min(100, round($percentageAchieved, 2)), max(0, 100 - round($percentageAchieved, 2))],
 
-
-
-                // Chart-specific data
                 'revenueOverTimeLabels' => $revenueOverTime->pluck('date')->map(fn($d) => Carbon::parse($d)->format('M d')),
                 'revenueOverTimeData' => $revenueOverTime->pluck('total_revenue'),
                 'salesByCategoryLabels' => $salesByCategory->keys(),
                 'salesByCategoryData' => $salesByCategory->values(),
                 'inventoryValueByCategoryLabels' => $inventoryValueByCategory->keys(),
                 'inventoryValueByCategoryData' => $inventoryValueByCategory->values(),
-                'salesByChannelLabels' => $salesByChannel->pluck('channel')->map(fn($c) => ucwords(str_replace('_', ' ', $c))),
-                'salesByChannelData' => $salesByChannel->pluck('count')->all(),
+
+                // (FIXED) Use the correct alias 'channel_name' for the labels
+                'salesByChannelLabels' => $salesByChannel->pluck('channel_name'),
+                'salesByChannelData' => $salesByChannel->pluck('count'),
             ];
         });
-        $this->updateCounter++;
 
+        $this->updateCounter++;
         $this->dispatch('update-charts', data: $data);
         return view('livewire.dashboard', $data);
     }
