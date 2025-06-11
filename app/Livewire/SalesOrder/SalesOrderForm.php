@@ -14,6 +14,7 @@ use Illuminate\Support\Collection;
 use App\Models\SalesChannel;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -34,6 +35,8 @@ class SalesOrderForm extends Component
     public $order_number = '';
 
     public $items = [];
+    public $originalFulfilledItemsData = [];
+
 
     // --- REVISED DROPDOWNS ---
     public Collection $allLocations;
@@ -127,7 +130,6 @@ class SalesOrderForm extends Component
         $loadedSo->items->load(['saleable' => fn($morphTo) => $morphTo->morphWith([
             ProductVariant::class => ['product:id,name,sku']
         ])]);
-
         $this->salesOrderInstance = $loadedSo;
         $this->order_number = $this->salesOrderInstance->order_number;
         $this->sales_channel_id = $this->salesOrderInstance->sales_channel_id;
@@ -140,28 +142,29 @@ class SalesOrderForm extends Component
         $this->status = $this->salesOrderInstance->status;
 
         $this->items = $this->salesOrderInstance->items->map(function ($item) {
-            $sellable = $item->sellable;
+            $sellable = $item->saleable;
             if (!$sellable) return null;
-
             $key = class_basename($sellable) . '_' . $sellable->id;
             $displayName = $sellable instanceof Product
                 ? "{$sellable->name} (SKU: {$sellable->sku})"
                 : "{$sellable->product->name} - {$sellable->variant_name} (SKU: {$sellable->product->sku})";
 
             $stock = LocationInventory::where('location_id', $this->location_id)
-                ->where('itemable_type', $sellable->getMorphClass())
-                ->where('itemable_id', $sellable->id)
+                ->where('inventoriable_type', $sellable->getMorphClass())
+                ->where('inventoriable_id', $sellable->id)
                 ->value('stock_quantity') ?? 0;
-
             return [
                 'id' => $item->id,
                 'selected_item_key' => $key,
                 'quantity' => $item->quantity,
-                'price_per_unit' => (float)$item->price,
-                'variant_name_display' => $displayName,
+                'price_per_unit' => (float)$item->price_per_unit,
+                'display_name' => $displayName,
                 'available_stock' => $stock,
             ];
         })->filter()->values()->toArray();
+
+
+
     }
 
     public function updatedLocationId($locationId)
@@ -294,14 +297,26 @@ class SalesOrderForm extends Component
         $isNewOrder = !$this->salesOrderInstance?->exists;
         $originalStatus = $isNewOrder ? null : $this->salesOrderInstance->getOriginal('status');
 
+        // Fetch original items if the order was previously fulfilled, for stock reversal/adjustment
+        if (!$isNewOrder && $originalStatus === 'fulfilled' && $this->salesOrderInstance) {
+            $this->originalFulfilledItemsData = $this->salesOrderInstance->items()->with('saleable')->get()->map(function ($item) {
+                if (!$item->saleable) return null;
+                return [
+                    'saleable_model' => $item->saleable, // Keep the model for easy access to morphClass and id
+                    'quantity' => $item->quantity,
+                ];
+            })->filter()->values()->all();
+        }
+
         DB::transaction(function () use (&$stockUpdated, $isNewOrder, $originalStatus) {
+            $currentLocationId = $this->location_id; // Use the location_id from the form
 
             $this->salesOrderInstance = SalesOrder::updateOrCreate(
                 ['id' => $this->salesOrderInstance?->id],
                 [
                     'order_number' => $this->order_number ?: $this->generateOrderNumber(true),
-                    'sales_channel_id' => $this->sales_channel_id,
-                    'location_id' => $this->location_id,
+                    'sales_channel_id' => $this->sales_channel_id, // from form
+                    'location_id' => $currentLocationId,      // from form
                     'order_date' => $this->order_date,
                     'customer_details' => ['name' => $this->customer_name, 'email' => $this->customer_email, 'phone' => $this->customer_phone],
                     'status' => $this->status,
@@ -309,7 +324,7 @@ class SalesOrderForm extends Component
                 ]
             );
 
-            // Sync items - This part remains the same, it creates the DB records.
+            // Sync items
             $currentItemIds = [];
             foreach ($this->items as $itemData) {
                 if (empty($itemData['selected_item_key']) || ($itemData['quantity'] ?? 0) <= 0) continue;
@@ -325,50 +340,85 @@ class SalesOrderForm extends Component
                 $this->salesOrderInstance->items()->whereNotIn('id', $currentItemIds)->delete();
             }
 
-            // --- INVENTORY FULFILLMENT LOGIC (THE FINAL FIX) ---
+            // --- REVISED INVENTORY FULFILLMENT LOGIC ---
             $currentStatus = $this->salesOrderInstance->status;
+            $orderId = $this->salesOrderInstance->id;
+            $orderMorphClass = $this->salesOrderInstance->getMorphClass();
 
-            if ($currentStatus === 'fulfilled' && $originalStatus !== 'fulfilled') {
-
-                // INSTEAD of re-fetching, we loop over the form data WE KNOW IS CORRECT.
+            // Scenario 1: Order becomes 'fulfilled' (was not 'fulfilled' before)
+            if ($currentStatus === 'fulfilled' && $originalStatus !== 'fulfilled' && $currentLocationId) {
+                Log::info("SO #{$this->salesOrderInstance->order_number}: Status changed to 'fulfilled'. Processing stock decrements.");
                 foreach ($this->items as $itemData) {
-                    // We still need to find the sellable model to get its morph class.
                     if (empty($itemData['selected_item_key'])) continue;
                     list($type, $id) = explode('_', $itemData['selected_item_key']);
                     $sellableClass = 'App\\Models\\' . $type;
                     $sellable = $sellableClass::find($id);
-
                     if ($sellable) {
-                        $quantityToDecrement = (int)$itemData['quantity'];
-
-                        // 1. Update the snapshot table
-                        LocationInventory::where('location_id', $this->salesOrderInstance->location_id)
-                            ->where('inventoriable_type', $sellable->getMorphClass())
-                            ->where('inventoriable_id', $sellable->id)
-                            ->decrement('stock_quantity', $quantityToDecrement);
-
-                        // 2. Create the audit trail
-                        InventoryMovement::create([
-                            'itemable_type' => $sellable->getMorphClass(),
-                            'itemable_id'   => $sellable->id,
-                            'location_id'   => $this->salesOrderInstance->location_id,
-                            'quantity'      => -$quantityToDecrement,
-                            'type'          => 'sale',
-                            'related_type'  => 'sales_order',
-                            'related_id'    => $this->salesOrderInstance->id,
-                        ]);
+                        $this->adjustStockAndLogMovement($sellable, -(int)$itemData['quantity'], 'sale', $currentLocationId, $orderId, $orderMorphClass);
                     }
                 }
                 $stockUpdated = true;
+            }
+            // Scenario 2: Order was 'fulfilled' and now is NOT 'fulfilled' (e.g., 'pending', 'cancelled')
+            elseif ($currentStatus !== 'fulfilled' && $originalStatus === 'fulfilled' && $currentLocationId) {
+                Log::info("SO #{$this->salesOrderInstance->order_number}: Status changed from 'fulfilled'. Reverting stock.");
+                foreach ($this->originalFulfilledItemsData as $originalItem) {
+                    $this->adjustStockAndLogMovement($originalItem['saleable_model'], $originalItem['quantity'], 'sale_return', $currentLocationId, $orderId, $orderMorphClass);
+                }
+                $stockUpdated = true;
+            }
+            // Scenario 3: Order was 'fulfilled' and REMAINS 'fulfilled' (items/location might have changed)
+            elseif ($currentStatus === 'fulfilled' && $originalStatus === 'fulfilled' && $currentLocationId) {
+                Log::info("SO #{$this->salesOrderInstance->order_number}: Status remains 'fulfilled'. Adjusting stock for changes.");
+                // Revert stock from original fulfillment
+                foreach ($this->originalFulfilledItemsData as $originalItem) {
+                    $this->adjustStockAndLogMovement($originalItem['saleable_model'], $originalItem['quantity'], 'sale_edit_reversal', $currentLocationId, $orderId, $orderMorphClass);
+                }
+                // Apply stock for current items
+                foreach ($this->items as $itemData) {
+                    if (empty($itemData['selected_item_key'])) continue;
+                    list($type, $id) = explode('_', $itemData['selected_item_key']);
+                    $sellableClass = 'App\\Models\\' . $type;
+                    $sellable = $sellableClass::find($id);
+                    if ($sellable) {
+                        $this->adjustStockAndLogMovement($sellable, -(int)$itemData['quantity'], 'sale_edit_fulfillment', $currentLocationId, $orderId, $orderMorphClass);
+                    }
+                }
+                $stockUpdated = true; // Assume stock might have changed if we are in this block
             }
         });
 
         Cache::forget('dashboard_data');
         session()->flash('message', 'Sales Order saved successfully.');
         if ($stockUpdated) {
-            session()->flash('stock_update_message', 'Stock levels have been updated.');
+            session()->flash('stock_update_message', 'Stock levels have been adjusted accordingly.');
         }
         return redirect()->route('sales-orders.index');
+    }
+
+    private function adjustStockAndLogMovement(\Illuminate\Database\Eloquent\Model $sellable, int $quantityChange, string $movementType, int $locationId, int $orderId, string $orderMorphClass)
+    {
+        if ($quantityChange == 0) return;
+
+        $inventoryRecord = LocationInventory::firstOrCreate(
+            [
+                'inventoriable_type' => $sellable->getMorphClass(),
+                'inventoriable_id'   => $sellable->id,
+                'location_id'        => $locationId,
+            ],
+            ['stock_quantity' => 0]
+        );
+        $inventoryRecord->increment('stock_quantity', $quantityChange);
+        InventoryMovement::create([
+            'itemable_type' => $sellable->getMorphClass(),
+            'itemable_id'   => $sellable->id,
+            'location_id'   => $locationId,
+            'quantity'      => $quantityChange, // This will be negative for decrements, positive for increments
+            'type'          => $movementType,
+            'related_type'  => $orderMorphClass,
+            'related_id'    => $orderId,
+        ]);
+        Log::info("Stock for " . class_basename($sellable) . " #{$sellable->id} changed by {$quantityChange} at Location #{$locationId} due to SO #{$orderId} - Type: {$movementType}. New stock: {$inventoryRecord->fresh()->stock_quantity}");
     }
 
     public function render()

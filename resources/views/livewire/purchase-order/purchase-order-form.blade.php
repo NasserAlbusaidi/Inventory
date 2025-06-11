@@ -14,6 +14,8 @@
         </div>
     @endif
 
+
+
     <form wire:submit.prevent="savePurchaseOrder" class="bg-white p-6 md:p-8 rounded-lg shadow-md">
         {{-- PO Header --}}
         <fieldset class="border border-gray-300 p-4 rounded-md mb-6">
@@ -65,7 +67,8 @@
                 </div>
 
                 <div>
-                    <label for="receiving_location_id" class="block text-sm font-medium text-gray-700 mb-1">Receiving Location</label>
+                    <label for="receiving_location_id" class="block text-sm font-medium text-gray-700 mb-1">Receiving
+                        Location</label>
                     <select id="receiving_location_id" wire:model.defer="receiving_location_id"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 h-10">
                         <option value="">Select Location</option>
@@ -96,17 +99,20 @@
 
                         <div class="col-span-12 md:col-span-4">
                             {{-- 1. UPDATE LABEL --}}
-                            <label for="items.{{ $index }}.selected_item_key" class="block text-xs font-medium text-gray-700">Product / Variant</label>
+                            <label for="items.{{ $index }}.selected_item_key"
+                                class="block text-xs font-medium text-gray-700">Product / Variant</label>
 
                             {{-- 2. UPDATE wire:model and id --}}
-                            <select wire:model.live="items.{{ $index }}.selected_item_key" id="items.{{ $index }}.selected_item_key"
+                            <select wire:model.live="items.{{ $index }}.selected_item_key"
+                                id="items.{{ $index }}.selected_item_key"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 h-10">
                                 <option value="">Select Item</option>
 
                                 {{-- 3. UPDATE LOOP to use new collection and properties --}}
                                 @foreach ($allPurchasableItems as $purchasable)
                                     <option value="{{ $purchasable['key'] }}">
-                                        {{ $purchasable['display_name'] }} (Cost: {{ number_format($purchasable['cost'], 2) }})
+                                        {{ $purchasable['display_name'] }} (Cost:
+                                        {{ number_format($purchasable['cost'], 2) }})
                                     </option>
                                 @endforeach
                             </select>
@@ -118,11 +124,12 @@
                         </div>
 
                         <div class="col-span-6 md:col-span-2">
-                            <label for="items.{{ $index }}.quantity" class="block text-xs font-medium text-gray-700">Quantity</label>
-                            <input type="number" wire:model.live="items.{{ $index }}.quantity" id="items.{{ $index }}.quantity" min="1"
-                                   {{-- 5. UPDATE disabled condition --}}
-                                   {{ empty($item['selected_item_key']) ? 'disabled' : '' }}
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+                            <label for="items.{{ $index }}.quantity"
+                                class="block text-xs font-medium text-gray-700">Quantity</label>
+                            <input type="number" wire:model.live="items.{{ $index }}.quantity"
+                                id="items.{{ $index }}.quantity" min="1" {{-- 5. UPDATE disabled condition --}}
+                                {{ empty($item['selected_item_key']) ? 'disabled' : '' }}
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
                             @error('items.' . $index . '.quantity')
                                 <span class="text-red-500 text-xs mt-1">{{ $message }}</span>
                             @enderror
@@ -131,8 +138,10 @@
                         {{-- ===== END: VIEW CHANGES ===== --}}
 
                         <div class="col-span-6 md:col-span-3">
-                            <label for="items.{{ $index }}.cost_price_per_unit" class="block text-xs font-medium text-gray-700">Cost Price/Unit (OMR)</label>
-                            <input type="number" step="0.001" wire:model.live="items.{{ $index }}.cost_price_per_unit"
+                            <label for="items.{{ $index }}.cost_price_per_unit"
+                                class="block text-xs font-medium text-gray-700">Cost Price/Unit (OMR)</label>
+                            <input type="number" step="0.001"
+                                wire:model.live="items.{{ $index }}.cost_price_per_unit"
                                 id="items.{{ $index }}.cost_price_per_unit" min="0"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
                             @error('items.' . $index . '.cost_price_per_unit')
@@ -148,8 +157,8 @@
                         </div>
 
                         <div class="col-span-12 md:col-span-1 flex items-end justify-end">
-                             {{-- Let's always show the remove button for simplicity --}}
-                             <button type="button" wire:click="removeItem({{ $index }})"
+                            {{-- Let's always show the remove button for simplicity --}}
+                            <button type="button" wire:click="removeItem({{ $index }})"
                                 class="text-red-500 hover:text-red-700 p-2 rounded-md bg-red-100 hover:bg-red-200">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
                                     fill="currentColor">

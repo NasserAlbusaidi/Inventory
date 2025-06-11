@@ -266,10 +266,21 @@ class PurchaseOrderForm extends Component
 
         $stockUpdated = false;
 
-        DB::transaction(function () use (&$stockUpdated) {
-            $isNewOrder = !$this->purchaseOrderInstance?->exists;
-            $originalStatus = $isNewOrder ? null : $this->purchaseOrderInstance->getOriginal('status');
+        $isNewOrder = !$this->purchaseOrderInstance?->exists;
+        $originalStatus = $isNewOrder ? null : $this->purchaseOrderInstance->getOriginal('status');
+        $originalReceivingLocationId = $isNewOrder ? null : $this->purchaseOrderInstance->getOriginal('receiving_location_id');
 
+        $originalReceivedItemsData = [];
+        if (!$isNewOrder && $originalStatus === 'received' && $this->purchaseOrderInstance) {
+            $originalReceivedItemsData = $this->purchaseOrderInstance->items()->with('purchasable')->get()->map(function ($item) {
+                if (!$item->purchasable) return null;
+                return [
+                    'purchasable_model' => $item->purchasable,
+                    'quantity' => $item->quantity,
+                ];
+            })->filter()->values()->all();
+        }
+        DB::transaction(function () use (&$stockUpdated, $isNewOrder, $originalStatus, $originalReceivedItemsData, $originalReceivingLocationId) {
             $poData = [
                 'supplier_id' => $this->supplier_id,
                 'order_number' => $this->order_number ?: $this->generateOrderNumber(true),
@@ -309,48 +320,55 @@ class PurchaseOrderForm extends Component
             // --- 3. REVISED STOCK UPDATE LOGIC ---
             $currentStatus = $this->purchaseOrderInstance->status;
             $locationId = $this->purchaseOrderInstance->receiving_location_id;
+            $orderId = $this->purchaseOrderInstance->id;
+            $orderMorphClass = $this->purchaseOrderInstance->getMorphClass();
 
+            // Scenario 1: Order becomes 'received' (was not 'received' before)
             if ($currentStatus === 'received' && $originalStatus !== 'received' && $locationId) {
                 Log::info("PO #{$this->purchaseOrderInstance->order_number}: Status changed to 'received'. Processing stock updates.");
-
                 foreach ($this->purchaseOrderInstance->fresh()->items as $item) {
                     $purchasable = $item->purchasable;
                     if ($purchasable) {
-                        // Step A: Update the snapshot table
-                        $inventoryRecord = LocationInventory::firstOrCreate(
-                            [
-                                // IMPORTANT: Ensure these column names match your actual table schema
-                                'inventoriable_type' => $purchasable->getMorphClass(),
-                                'inventoriable_id'   => $purchasable->id,
-                                'location_id'   => $locationId,
-                            ],
-                            ['stock_quantity' => 0] // Default value if new
-                        );
-                        $inventoryRecord->increment('stock_quantity', $item->quantity);
-
-                        // Step B: Create the permanent ledger/audit trail record
-                        InventoryMovement::create([
-                            'itemable_type' => $purchasable->getMorphClass(), // Use the correct field name
-                            'itemable_id'   => $purchasable->id,             // Use the correct field name
-                            'location_id'   => $locationId,
-                            'quantity'      => $item->quantity,
-                            'type'          => 'purchase',
-                            'related_type'  => PurchaseOrder::class,
-                            'related_id'    => $this->purchaseOrderInstance->id,
-                        ]);
-
-                        Log::info("  - Stock for " . class_basename($purchasable) . " #{$purchasable->id} incremented by {$item->quantity} at Location #{$locationId}.");
+                        $this->adjustStockAndLogMovement($purchasable, $item->quantity, 'purchase_receipt', $locationId, $orderId, $orderMorphClass);
                     }
                 }
                 $stockUpdated = true;
-            } else {
-                // Log why the stock update was skipped
-                if ($currentStatus !== 'received') {
-                    Log::info("PO #{$this->purchaseOrderInstance->order_number}: Stock update skipped. Status is '{$currentStatus}', not 'received'.");
-                } elseif ($originalStatus === 'received') {
-                    Log::info("PO #{$this->purchaseOrderInstance->order_number}: Stock update skipped. Status was already 'received'.");
-                } elseif (!$locationId) {
-                    Log::info("PO #{$this->purchaseOrderInstance->order_number}: Stock update skipped. No receiving location was set.");
+            }
+            // Scenario 2: Order was 'received' and now is 'cancelled'
+            elseif ($currentStatus === 'cancelled' && $originalStatus === 'received' && $originalReceivingLocationId) {
+                Log::info("PO #{$this->purchaseOrderInstance->order_number}: Status changed from 'received' to 'cancelled'. Reverting stock.");
+
+                // Check if this cancellation might lead to negative stock
+                $potentialNegativeStockWarning = false;
+                foreach ($originalReceivedItemsData as $originalItem) {
+                    $purchasable = $originalItem['purchasable_model'];
+                    $currentStock = LocationInventory::where('inventoriable_type', $purchasable->getMorphClass())
+                        ->where('inventoriable_id', $purchasable->id)
+                        ->where('location_id', $originalReceivingLocationId)
+                        ->value('stock_quantity') ?? 0;
+                        if (($currentStock - $originalItem['quantity']) < 0) {
+                        $potentialNegativeStockWarning = true;
+                        break;
+                    }
+                }
+                if ($potentialNegativeStockWarning) {
+                    session()->flash('warning_negative_stock', 'Warning: Cancelling this received Purchase Order may result in negative stock levels for some items, possibly due to prior sales of these items.');
+                }
+
+                foreach ($originalReceivedItemsData as $originalItem) {
+                    $this->adjustStockAndLogMovement($originalItem['purchasable_model'], -$originalItem['quantity'], 'purchase_cancellation', $originalReceivingLocationId, $orderId, $orderMorphClass);
+                }
+                $stockUpdated = true;
+            }
+            // Scenario 3: Order was 'received' and REMAINS 'received' but location or items might have changed
+            // This is more complex and would involve reverting old stock and applying new.
+            // For now, we only handle the distinct transitions to/from 'received'.
+            // If you need to handle item/location changes on an already received PO, this section would need expansion.
+            elseif ($currentStatus === 'received' && $originalStatus === 'received') {
+                if ($locationId != $originalReceivingLocationId) {
+                    Log::info("PO #{$this->purchaseOrderInstance->order_number}: Receiving location changed on an already received order. Manual stock adjustment might be needed or implement full reversal/reapplication logic.");
+                    // Potentially revert from $originalReceivingLocationId and apply to $locationId
+                    // This requires careful handling of item changes as well.
                 }
             }
         });
@@ -365,6 +383,32 @@ class PurchaseOrderForm extends Component
         }
 
         return redirect()->route('purchase-orders.index');
+    }
+
+    private function adjustStockAndLogMovement(\Illuminate\Database\Eloquent\Model $purchasable, int $quantityChange, string $movementType, int $locationId, int $orderId, string $orderMorphClass)
+    {
+        if ($quantityChange == 0) return;
+
+        $inventoryRecord = LocationInventory::firstOrCreate(
+            [
+                'inventoriable_type' => $purchasable->getMorphClass(),
+                'inventoriable_id'   => $purchasable->id,
+                'location_id'        => $locationId,
+            ],
+            ['stock_quantity' => 0]
+        );
+        $inventoryRecord->increment('stock_quantity', $quantityChange);
+
+        InventoryMovement::create([
+            'itemable_type' => $purchasable->getMorphClass(),
+            'itemable_id'   => $purchasable->id,
+            'location_id'   => $locationId,
+            'quantity'      => $quantityChange,
+            'type'          => $movementType,
+            'related_type'  => $orderMorphClass, // Use the morph class of PurchaseOrder
+            'related_id'    => $orderId,
+        ]);
+        Log::info("Stock for " . class_basename($purchasable) . " #{$purchasable->id} changed by {$quantityChange} at Location #{$locationId} due to PO #{$orderId} - Type: {$movementType}. New stock: {$inventoryRecord->fresh()->stock_quantity}");
     }
 
     public function render()

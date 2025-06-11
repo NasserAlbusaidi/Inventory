@@ -163,9 +163,16 @@
                                         <label for="items.{{ $index }}.selected_item_key" class="block text-xs font-medium text-gray-700 dark:text-gray-400">Product / Variant</label>
                                         <select wire:model.live="items.{{ $index }}.selected_item_key" id="items.{{ $index }}.selected_item_key" class="form-select mt-1 block w-full text-sm rounded-lg" {{ !$location_id ? 'disabled' : '' }}>
                                             <option value="">Select Item...</option>
+                                            {{-- If editing and the current item is not in the sellable list (e.g. out of stock at new location), still show it --}}
+                                            @if ($salesOrderInstance?->exists && !empty($items[$index]['selected_item_key']) && !$allSellableItems->firstWhere('key', $items[$index]['selected_item_key']))
+                                                <option value="{{ $items[$index]['selected_item_key'] }}">
+                                                    {{ $items[$index]['display_name'] ?? 'Previously Selected Item' }} (Unavailable at current location)
+                                                </option>
+                                            @endif
                                             @foreach ($allSellableItems as $sellable)
                                                 <option value="{{ $sellable['key'] }}">{{ $sellable['display_name'] }} (Stock: {{ $sellable['stock'] }})</option>
                                             @endforeach
+
                                         </select>
                                         @error('items.' . $index . '.selected_item_key')<span class="text-red-500 text-xs mt-1">{{ $message }}</span>@enderror
                                     </div>
