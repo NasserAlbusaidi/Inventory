@@ -4,15 +4,26 @@
         {{-- Header Section --}}
         <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">Products</h1>
-            <a href="{{ route('products.create') }}"
-                class="inline-flex items-center px-6 py-3 bg-indigo-600 border border-transparent rounded-lg font-semibold text-sm text-white uppercase tracking-widest hover:bg-indigo-700 dark:hover:bg-indigo-500 active:bg-indigo-900 focus:outline-none focus:border-indigo-900 focus:ring ring-indigo-300 disabled:opacity-25 transition ease-in-out duration-150 shadow-md hover:shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                    stroke="currentColor" class="w-5 h-5 mr-2 -ml-1">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-                Add New Product
-            </a>
+            <div class="flex items-center space-x-3">
+                <a href="{{ route('products.import') }}"
+                    class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Import Products
+                </a>
+                <a href="{{ route('products.create') }}"
+                    class="inline-flex items-center px-6 py-3 bg-indigo-600 border border-transparent rounded-lg font-semibold text-sm text-white uppercase tracking-widest hover:bg-indigo-700 dark:hover:bg-indigo-500 active:bg-indigo-900 focus:outline-none focus:border-indigo-900 focus:ring ring-indigo-300 disabled:opacity-25 transition ease-in-out duration-150 shadow-md hover:shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-5 h-5 mr-2 -ml-1">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    Add New Product
+                </a>
+            </div>
         </div>
 
         {{-- Flash Messages --}}
@@ -161,9 +172,10 @@
                                     <a href="{{ route('products.edit', $product) }}"
                                         class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold">Edit</a>
                                     {{-- The delete action should be moved to the ProductList component --}}
-                                    <button
-                                        wire:click="$dispatch('openModal', { component: 'product.delete-product-modal', arguments: { productId: {{ $product->id }} } })"
-                                        class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-semibold">Trash</button>
+                                    <button wire:click="confirmDelete({{ $product->id }})"
+                                        class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-semibold">
+                                        Trash
+                                    </button>
                                 </td>
                             </tr>
                         @empty
@@ -191,6 +203,59 @@
         @if ($products->hasPages())
             <div class="mt-6 px-2">
                 {{ $products->links() }}
+            </div>
+        @endif
+        @if ($showDeleteModal)
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75"
+                x-data="{ show: @entangle('showDeleteModal') }" x-show="show" x-on:keydown.escape.window="show = false"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+                {{-- Modal Content --}}
+                <div class="bg-white dark:bg-gray-300 rounded-lg shadow-xl w-full max-w-md m-4"
+                    @click.away="show = false" x-show="show" x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                    <div class="p-6">
+                        <div class="flex items-start space-x-3">
+                            <div
+                                class="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
+                                <svg class="h-6 w-6 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg"
+                                    fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                    Delete Product
+                                </h3>
+                                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                    Are you sure you want to delete <strong>"{{ $productToDelete?->name }}"</strong>?
+                                    All of its data will be permanently removed. This action cannot be undone.
+                                </p>
+                                <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                                    <strong>Note:</strong> This will also delete all associated variants and stock
+                                    records, and even Purchase Orders that include this product.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-lg">
+                        <button wire:click="deleteProduct" wire:loading.attr="disabled" type="button"
+                            class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 sm:ml-3 sm:w-auto">
+                            Delete
+                        </button>
+                        <button wire:click="closeModal" type="button"
+                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-900 dark:text-gray-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 sm:mt-0 sm:w-auto">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
             </div>
         @endif
     </div>

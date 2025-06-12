@@ -10,6 +10,7 @@ use App\Livewire\Category\CategoryForm;
 use App\Livewire\Location\LocationList;
 use App\Livewire\Location\LocationForm;
 use App\Livewire\Supplier\SupplierList;
+use App\Livewire\Product\ImportProducts;
 use App\Livewire\Dashboard;
 use App\Livewire\Supplier\SupplierForm;
 use App\Livewire\Inventory\StockAdjustmentForm;
@@ -30,6 +31,9 @@ Route::post('/dashboard', [DashboardController::class, 'updateMonthlyTarget'])->
 Route::get('/products', ProductList::class)->name('products.index');
 Route::get('/products/create', ProductForm::class)->name('products.create');
 Route::get('/products/{productId}/edit', ProductForm::class)->name('products.edit');
+Route::get('/products/import', ImportProducts::class)->name('products.import');
+Route::get('/products/import/template', [ImportProducts::class, 'downloadTemplate'])->name('products.import.template');
+
 
 // Category Management Routes
 Route::get('/categories', CategoryList::class)->name('categories.index');

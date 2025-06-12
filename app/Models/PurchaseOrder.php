@@ -85,7 +85,7 @@ class PurchaseOrder extends Model
      */
     public function setStatusAttribute(string $value): void
     {
-        $validStatuses = ['pending', 'received', 'cancelled'];
+        $validStatuses = ['ordered', 'received', 'cancelled'];
         if (in_array($value, $validStatuses)) {
             $this->attributes['status'] = $value;
         } else {

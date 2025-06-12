@@ -8,6 +8,7 @@ use App\Observers\PurchaseOrderObserver;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Observers\ProductObserver;
 use App\Services\SettingsService;
 
 class AppServiceProvider extends ServiceProvider
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         PurchaseOrder::observe(PurchaseOrderObserver::class);
+        Product::observe(ProductObserver::class);
         Relation::enforceMorphMap([
             'product' => 'App\Models\Product',
             'variant' => 'App\Models\ProductVariant',
