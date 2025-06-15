@@ -200,9 +200,31 @@
         </div>
 
         {{-- Pagination --}}
+        {{-- Pagination and Per Page Controls --}}
         @if ($products->hasPages())
-            <div class="mt-6 px-2">
-                {{ $products->links() }}
+            <div class="mt-6 px-2 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg shadow-inner">
+                <div class="flex justify-between items-center">
+
+                    {{-- "Per Page" Dropdown --}}
+                    <div class="flex items-center space-x-2 text-sm">
+                        <label for="perPage" class="text-gray-600 dark:text-gray-400">Items per page:</label>
+                        <select wire:model.live="perPage" id="perPage"
+                            class="form-select text-sm rounded-md shadow-sm border-gray-300 dark:bg-gray-700 dark:border-gray-600 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+
+
+
+                    {{-- Existing Pagination Links --}}
+                    <div>
+                        {{ $products->links() }}
+                    </div>
+
+                </div>
             </div>
         @endif
         @if ($showDeleteModal)

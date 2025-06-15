@@ -26,6 +26,9 @@ class ProductList extends Component
     // (NEW) Property to hold the status filter from the dashboard
     public $statusFilter = '';
 
+    public int $perPage = 10;
+
+
     public bool $showDeleteModal = false;
     public ?Product $productToDelete = null;
 
@@ -33,7 +36,8 @@ class ProductList extends Component
         'search' => ['except' => ''],
         'categoryFilter' => ['except' => ''],
         'page' => ['except' => 1],
-        'statusFilter' => ['as' => 'filter[status]'], // Map the query string `filter[status]` to our property
+        'statusFilter' => ['as' => 'filter[status]'],
+        'perPage' => ['except' => 10],
     ];
 
     public function mount(Request $request) // <-- Inject Request to get filter from URL on initial load
@@ -184,7 +188,7 @@ class ProductList extends Component
             }
         }
 
-        $products = $productsQuery->orderBy('name')->paginate(10);
+        $products = $productsQuery->orderBy('name')->paginate($this->perPage);
         $lowStockThreshold = app('settings')->get('low_stock_threshold', 5);
 
 

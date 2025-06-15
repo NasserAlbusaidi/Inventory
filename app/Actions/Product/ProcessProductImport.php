@@ -95,7 +95,7 @@ class ProcessProductImport
                             'has_variants' => $hasVariants,
                             'description' => $mainInfo['description'] ?? null,
                             // Price/Cost are only set on the parent if it does NOT have variants.
-                            'price' => !$hasVariants ? ($mainInfo['price'] ?? 0) : null,
+                            'selling_price' => !$hasVariants ? ($mainInfo['price'] ?? 0) : null,
                             'cost_price' => !$hasVariants ? ($mainInfo['cost'] ?? 0) : null,
                             'track_inventory' => 1
                         ]
