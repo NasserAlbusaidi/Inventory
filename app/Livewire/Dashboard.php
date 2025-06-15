@@ -183,8 +183,7 @@ class Dashboard extends Component
             // --- Top Selling & Most Profitable Items ---
             $allSoldItems = SalesOrderItem::whereHas('salesOrder', fn($q) => $q->whereBetween('sales_orders.created_at', [$this->startDate, $this->endDate]))
                 ->with(['saleable' => fn($morphTo) => $morphTo->morphWith([ProductVariant::class => ['product:id,name,sku']])])->get();
-
-            $itemStats = $allSoldItems->groupBy('saleable_id_and_type')->map(function ($items) {
+            $itemStats = $allSoldItems->groupBy('saleable')->map(function ($items) {
                 $firstItemSaleable = $items->first()->saleable;
                 if (!$firstItemSaleable) return null;
                 $displayName = ($firstItemSaleable instanceof ProductVariant) ? "{$firstItemSaleable->product->name} - {$firstItemSaleable->variant_name}" : $firstItemSaleable->name;
@@ -196,8 +195,9 @@ class Dashboard extends Component
             })->filter();
 
             $topSellingItems = $itemStats->sortByDesc('total_quantity_sold')->take(7);
-            $mostProfitableItems = $itemStats->sortByDesc('total_profit')->where('total_profit', '>', 0)->take(7);
-
+            // dd($topSellingItems);
+            $mostProfitableItems = $itemStats->sortByDesc('total_profit')->take(7);
+            // dd($mostProfitableItems);
             // --- Recent Orders ---
             $recentPurchases = PurchaseOrder::with('supplier')->latest('order_date')->limit(5)->get();
             $recentSales = SalesOrder::latest('order_date')->limit(5)->get();

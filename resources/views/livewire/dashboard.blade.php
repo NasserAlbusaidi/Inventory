@@ -396,7 +396,7 @@
                                                         class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                                                         {{ $item['display_name'] }}</td>
                                                     <td
-                                                        class="px-4 py-3 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-500 font-mono">
+                                                        class="{{ ($item['total_profit'] ?? 0) >= 0 ? 'px-4 py-3 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-500 font-mono' : 'px-4 py-3 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-500 font-mono' }}">
                                                         OMR {{ number_format($item['total_profit'], 2) }}</td>
                                                 </tr>
                                             @endforeach
