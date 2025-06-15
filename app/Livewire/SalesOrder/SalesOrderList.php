@@ -2,6 +2,7 @@
 
 namespace App\Livewire\SalesOrder;
 
+use App\Models\SalesChannel;
 use App\Models\SalesOrder; //
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -16,7 +17,7 @@ class SalesOrderList extends Component
 
     // From SalesOrder model migration: status default 'completed', channel enum ['shopify', 'boutique', 'other']
     public $soStatuses = ['pending', 'processing', 'completed', 'shipped', 'cancelled', 'refunded']; // Example statuses
-    public $soChannels = ['shopify', 'boutique', 'other'];
+    public $soChannels;
 
 
     protected $queryString = [
@@ -53,7 +54,8 @@ class SalesOrderList extends Component
 
     public function render()
     {
-        $salesOrders = SalesOrder::with(['location', 'items']) // Eager load location
+        $this->soChannels = SalesChannel::all()->pluck('name', 'id')->toArray(); // Fetch all sales channels
+        $salesOrders = SalesOrder::with(['location', 'items', 'salesChannel'])
             ->when($this->search, function ($query) {
                 $query->where('order_number', 'like', '%' . $this->search . '%')
                     ->orWhereJsonContains('customer_details->name', $this->search) // Search by customer name in JSON
@@ -63,7 +65,7 @@ class SalesOrderList extends Component
                 $query->where('status', $this->statusFilter);
             })
             ->when($this->channelFilter, function ($query) {
-                $query->where('channel', $this->channelFilter);
+                $query->where('sales_channel_id', $this->channelFilter);
             })
             ->orderBy('order_date', 'desc')
             ->orderBy('created_at', 'desc')
@@ -71,7 +73,6 @@ class SalesOrderList extends Component
 
         return view('livewire.sales-order.sales-order-list', [
             'salesOrders' => $salesOrders,
-            // statuses and channels are public properties
         ])->layout('components.layouts.livewire');
     }
 }
