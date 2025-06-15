@@ -2,7 +2,7 @@
     <div class="max-w-full mx-auto sm:px-6 lg:px-8">
 
         {{-- =================================================== --}}
-        {{-- Header Section (Adopted from Products Page) --}}
+        {{-- Header Section --}}
         {{-- =================================================== --}}
         <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">Locations</h1>
@@ -18,7 +18,7 @@
         </div>
 
         {{-- =================================================== --}}
-        {{-- Flash Messages (Adopted from Products Page) --}}
+        {{-- Flash Messages --}}
         {{-- =================================================== --}}
         @if (session()->has('message'))
             <div class="mb-6 bg-green-50 dark:bg-green-800/50 border-l-4 border-green-400 dark:border-green-600 p-4 shadow-md rounded-md"
@@ -56,7 +56,7 @@
         @endif
 
         {{-- =================================================== --}}
-        {{-- Filters Section (Adopted from Products Page) --}}
+        {{-- Filters Section --}}
         {{-- =================================================== --}}
         <div class="mb-6 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
             <div class="max-w-md">
@@ -79,7 +79,7 @@
         </div>
 
         {{-- =================================================== --}}
-        {{-- Locations Table (Adopted from Products Page) --}}
+        {{-- Locations Table with Total Stock --}}
         {{-- =================================================== --}}
         <div class="bg-white dark:bg-gray-800 shadow-xl rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
@@ -88,8 +88,7 @@
                         <tr>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Description</th>
-                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Movements</th>
-                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sales Orders</th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total Stock</th>
                             <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
@@ -100,20 +99,23 @@
                                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                                     {{ Str::limit($location->description, 80) ?? '-' }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 text-center">{{ $location->inventory_movements_count }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 text-center">{{ $location->sales_orders_count }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                    {{ (int) $location->total_stock }}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
+                                    <button wire:click="showProducts({{ $location->id }})" class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-semibold">
+                                        View Stock
+                                    </button>
                                     <a href="{{ route('locations.edit', $location) }}" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold">Edit</a>
                                     <button wire:click="deleteLocation({{ $location->id }})"
-                                            wire:confirm="Are you sure you want to delete this location? Associated data will be affected."
+                                            wire:confirm="This location may have records associated with it. Are you sure you want to delete '{{ $location->name }}'?"
                                             class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-semibold">Delete</button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <td colspan="4" class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
                                     <div class="flex flex-col items-center">
-                                        {{-- Icon for empty locations --}}
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 text-gray-400 dark:text-gray-500 mb-3">
                                           <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                           <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
@@ -132,6 +134,81 @@
         @if ($locations->hasPages())
             <div class="mt-6 px-2">
                 {{ $locations->links() }}
+            </div>
+        @endif
+
+        {{-- =================================================== --}}
+        {{-- View Products Modal --}}
+        {{-- =================================================== --}}
+        @if ($showProductsModal)
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75"
+                 x-data="{ show: @entangle('showProductsModal') }" x-show="show" x-on:keydown.escape.window="show = false"
+                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl m-4"
+                     @click.away="show = false" x-show="show" x-transition:enter="ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave="ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+
+                    <div class="p-6">
+                        <div class="flex justify-between items-start">
+                             <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                Stock in: <span class="text-indigo-600 dark:text-indigo-400">{{ $viewingLocation?->name }}</span>
+                            </h2>
+                            <button wire:click="closeModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+                        </div>
+
+                        <div class="mt-4 border-t dark:border-gray-700 pt-4">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Product / Variant</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">SKU</th>
+                                        <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stock</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    @forelse($productsInLocation as $item)
+                                        <tr>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                @if($item->inventoriable instanceof \App\Models\Product)
+                                                    {{ $item->inventoriable->name }}
+                                                @elseif($item->inventoriable instanceof \App\Models\ProductVariant)
+                                                    <span class="text-gray-500 dark:text-gray-400">{{ $item->inventoriable->product->name }} →</span> {{ $item->inventoriable->variant_name }}
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-400">{{ $item->inventoriable->product->sku ?? '-' }}</td>
+                                            <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-right text-gray-800 dark:text-gray-200">{{ $item->stock_quantity }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="3" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                No products with stock found in this location.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+
+                            @if($productsInLocation->hasPages())
+                                <div class="mt-4">
+                                    {{ $productsInLocation->links() }}
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-100 dark:bg-gray-700/50 px-6 py-4 flex justify-end rounded-b-lg">
+                        <button type="button" wire:click="closeModal" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">
+                            Close
+                        </button>
+                    </div>
+                </div>
             </div>
         @endif
     </div>
