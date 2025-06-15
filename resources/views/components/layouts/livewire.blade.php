@@ -27,6 +27,9 @@ class="font-sans antialiased bg-gray-50 dark:bg-slate-900 text-slate-800 dark:te
         {{ $slot }}
     </main>
 </div>
+
+@livewire('wire-elements-modal') {{-- Add this line --}}
+
 @livewireScripts
 @stack('scripts')
 </body>

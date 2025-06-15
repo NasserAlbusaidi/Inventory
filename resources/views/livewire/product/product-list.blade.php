@@ -1,6 +1,8 @@
 <div class="py-8">
     <div class="max-w-full mx-auto sm:px-6 lg:px-8">
 
+        {{-- Header, Flash Messages, and Filters (Unchanged) --}}
+        {{-- ... --}}
         {{-- Header Section --}}
         <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">Products</h1>
@@ -112,7 +114,8 @@
             @endif
         </div>
 
-        {{-- Products Table --}}
+        {{-- Products Table (Unchanged) --}}
+        {{-- ... --}}
         <div class="bg-white dark:bg-gray-800 shadow-xl rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -171,7 +174,12 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                                     <a href="{{ route('products.edit', $product) }}"
                                         class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold">Edit</a>
-                                    {{-- The delete action should be moved to the ProductList component --}}
+
+                                    <button wire:click="openAdjustStockModal({{ $product->id }})"
+                                        class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold">
+                                        Adjust Stock
+                                    </button>
+
                                     <button wire:click="confirmDelete({{ $product->id }})"
                                         class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-semibold">
                                         Trash
@@ -199,8 +207,9 @@
             </div>
         </div>
 
-        {{-- Pagination --}}
-        {{-- Pagination and Per Page Controls --}}
+
+        {{-- Pagination (Unchanged) --}}
+        {{-- ... --}}
         @if ($products->hasPages())
             <div class="mt-6 px-2 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg shadow-inner">
                 <div class="flex justify-between items-center">
@@ -227,14 +236,15 @@
                 </div>
             </div>
         @endif
+
+        {{-- (FIXED) DELETE PRODUCT MODAL --}}
         @if ($showDeleteModal)
             <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75"
                 x-data="{ show: @entangle('showDeleteModal') }" x-show="show" x-on:keydown.escape.window="show = false"
                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
                 x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
                 x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
-                {{-- Modal Content --}}
-                <div class="bg-white dark:bg-gray-300 rounded-lg shadow-xl w-full max-w-md m-4"
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md m-4"
                     @click.away="show = false" x-show="show" x-transition:enter="ease-out duration-300"
                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
@@ -242,7 +252,7 @@
                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
                     <div class="p-6">
-                        <div class="flex items-start space-x-3">
+                        <div class="flex items-start space-x-4">
                             <div
                                 class="flex-shrink-0 h-12 w-12 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
                                 <svg class="h-6 w-6 text-red-600 dark:text-red-400" xmlns="http://www.w3.org/2000/svg"
@@ -257,28 +267,164 @@
                                 </h3>
                                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
                                     Are you sure you want to delete <strong>"{{ $productToDelete?->name }}"</strong>?
-                                    All of its data will be permanently removed. This action cannot be undone.
+                                    This action cannot be undone.
                                 </p>
-                                <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                                    <strong>Note:</strong> This will also delete all associated variants and stock
-                                    records, and even Purchase Orders that include this product.
+                                {{-- (FIXED) Updated warning message to be accurate --}}
+                                <p
+                                    class="mt-4 text-sm text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/50 p-3 rounded-md border border-yellow-300 dark:border-yellow-600">
+                                    <strong>Note:</strong> Deletion will be prevented if the product has existing stock
+                                    or is linked to any sales or purchase orders.
                                 </p>
                             </div>
                         </div>
                     </div>
                     <div
-                        class="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-lg">
+                        class="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-lg">
                         <button wire:click="deleteProduct" wire:loading.attr="disabled" type="button"
                             class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 sm:ml-3 sm:w-auto">
                             Delete
                         </button>
                         <button wire:click="closeModal" type="button"
-                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold text-gray-900 dark:text-gray-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 sm:mt-0 sm:w-auto">
+                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-gray-600 px-4 py-2 text-sm font-semibold text-gray-900 dark:text-gray-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-500 hover:bg-gray-50 dark:hover:bg-gray-500 sm:mt-0 sm:w-auto">
                             Cancel
                         </button>
                     </div>
                 </div>
             </div>
         @endif
+
+        {{-- (FIXED) ADJUST STOCK MODAL --}}
+        @if ($showAdjustStockModal)
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75"
+                x-data="{ show: @entangle('showAdjustStockModal') }" x-show="show" x-on:keydown.escape.window="show = false"
+                x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg m-4"
+                    @click.away="show = false" x-show="show" x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+
+                    <form wire:submit.prevent="adjustStock">
+                        <div class="p-6">
+                            <h2 class="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Adjust Stock for:
+                                {{ $adjustingStockForProduct?->name }}</h2>
+
+                            <div class="space-y-4">
+                                @if ($adjustingStockForProduct?->has_variants)
+                                    {{-- ... variant selection unchanged ... --}}
+                                    <div>
+                                        <label for="selected_variant_id"
+                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Select
+                                            Variant</label>
+                                        <select id="selected_variant_id" wire:model.live="selected_variant_id"
+                                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500">
+                                            <option value="">-- Choose a variant --</option>
+                                            @foreach ($variants as $variant)
+                                                <option value="{{ $variant->id }}">{{ $variant->variant_name }}
+                                                    (SKU: {{ $variant->sku }})</option>
+                                            @endforeach
+                                        </select>
+                                        @error('selected_variant_id')
+                                            <span class="text-red-500 text-xs">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                @endif
+
+                                @if ($adjustingStockForProduct && (!$adjustingStockForProduct->has_variants || $selected_variant_id))
+                                    <div>
+                                        <label for="location_id"
+                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
+                                        <select id="location_id" wire:model="location_id"
+                                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500">
+                                            @foreach ($locations as $location)
+                                                <option value="{{ $location->id }}">{{ $location->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('location_id')
+                                            <span class="text-red-500 text-xs">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label for="adjustment_type"
+                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Adjustment
+                                            Type</label>
+                                        <select id="adjustment_type" wire:model.live="adjustment_type"
+                                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500">
+                                            <option value="addition">Addition (+)</option>
+                                            <option value="deduction">Deduction (-)</option>
+                                            {{-- (FIXED) Added new option --}}
+                                            <option value="set">Set New Value</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        {{-- (FIXED) Dynamic label for better UX --}}
+                                        @if ($adjustment_type === 'addition')
+                                            <label for="quantity"
+                                                class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity
+                                                to Add</label>
+                                        @elseif($adjustment_type === 'deduction')
+                                            <label for="quantity"
+                                                class="block text-sm font-medium text-gray-700 dark:text-gray-300">Quantity
+                                                to Deduct</label>
+                                        @else
+                                            <label for="quantity"
+                                                class="block text-sm font-medium text-gray-700 dark:text-gray-300">New
+                                                Total Stock Quantity</label>
+                                        @endif
+
+                                        {{-- (FIXED) Dynamic min attribute --}}
+                                        <input type="number" id="quantity" wire:model.live="quantity"
+                                            min="{{ $adjustment_type === 'set' ? '0' : '1' }}"
+                                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500">
+                                        @error('quantity')
+                                            <span class="text-red-500 text-xs mt-1">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label for="notes"
+                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Notes
+                                            (Reason)</label>
+                                        <input type="text" id="notes" wire:model="notes"
+                                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
+                                            placeholder="e.g., Stock count correction">
+                                        @error('notes')
+                                            <span class="text-red-500 text-xs">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-100 dark:bg-gray-700/50 px-6 py-4 flex justify-end space-x-4 rounded-b-lg">
+                            <button type="button" wire:click="closeAdjustStockModal"
+                                class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">
+                                Cancel
+                            </button>
+                            {{-- (FIXED) Updated disabled logic to be more robust --}}
+                            @php
+                                $isInvalidQuantity =
+                                    !is_numeric($quantity) ||
+                                    ($adjustment_type === 'set' && $quantity < 0) ||
+                                    ($adjustment_type !== 'set' && $quantity < 1);
+                                $isDisabled =
+                                    ($adjustingStockForProduct?->has_variants && !$selected_variant_id) ||
+                                    $isInvalidQuantity;
+                            @endphp
+                            <button type="submit"
+                                class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                @if ($isDisabled) disabled @endif wire:loading.attr="disabled">
+                                Adjust Stock
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endif
+
     </div>
 </div>
