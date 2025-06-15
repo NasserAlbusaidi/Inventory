@@ -153,7 +153,7 @@
                                                 class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span>
                                         @enderror
                                     </div>
-                                    <div>
+                                    {{-- <div>
                                         <label for="variant-stock-{{ $index }}"
                                             class="block text-xs font-medium text-gray-700 dark:text-gray-400 mb-1">Initial
                                             Stock *</label>
@@ -167,7 +167,7 @@
                                         @enderror
 
 
-                                    </div>
+                                    </div> --}}
                                     <div class="flex items-end space-x-2">
                                         <div class="flex-grow">
                                             <label for="variant-barcode-{{ $index }}"
@@ -239,7 +239,7 @@
                                 <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span>
                             @enderror
                         </div>
-                        <div>
+                        {{-- <div>
                             <label for="initial_stock"
                                 class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">initial Stock
                                 Quantity *</label>
@@ -250,10 +250,10 @@
                                 <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span>
                             @enderror
 
-                        </div>
+                        </div> --}}
                         <div>
                             <label for="barcode"
-                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Barcode</label>
+                                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Barcode (optional)</label>
                             <input type="text" id="barcode" wire:model.lazy="barcode"
                                 class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
                                 placeholder="Optional">

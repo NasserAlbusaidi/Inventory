@@ -23,7 +23,7 @@ return [
         'routes' => ['expenses.*', 'inventory.adjustments.*'],
         'children' => [
             ['name' => 'Recurring Expenses', 'route' => 'expenses.index', 'active' => 'expenses.*'],
-            ['name' => 'Stock Adjustments', 'route' => 'inventory.adjustments.create', 'active' => 'inventory.adjustments.*'],
+            // ['name' => 'Stock Adjustments', 'route' => 'inventory.adjustments.create', 'active' => 'inventory.adjustments.*'],
             ['name' => 'Settings', 'route' => 'settings.index', 'active' => 'settings.*'],
         ],
     ],
