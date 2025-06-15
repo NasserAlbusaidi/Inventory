@@ -12,14 +12,15 @@ use App\Livewire\Location\LocationForm;
 use App\Livewire\Supplier\SupplierList;
 use App\Livewire\Product\ImportProducts;
 use App\Livewire\Dashboard;
+use App\Livewire\Expense\ExpenseForm;
+use App\Livewire\Expense\ExpenseList;
 use App\Livewire\Supplier\SupplierForm;
 use App\Livewire\Inventory\StockAdjustmentForm;
 use App\Livewire\PurchaseOrder\PurchaseOrderList;
 use App\Livewire\PurchaseOrder\PurchaseOrderForm;
 use App\Livewire\SalesOrder\SalesOrderList;
 use App\Livewire\SalesOrder\SalesOrderForm;
-use App\Livewire\Expense\RecurringExpenseList;
-use App\Livewire\Expense\RecurringExpenseForm;
+
 
 // Dashboard Route
 // This is the route to your NEW Livewire component
@@ -66,9 +67,9 @@ Route::get('/sales-orders/{salesOrder}/edit', SalesOrderForm::class)->name('sale
 Route::get('/sales-orders/{salesOrder}', SalesOrderForm::class)->name('sales-orders.show');
 
 
-Route::get('/expenses', RecurringExpenseList::class)->name('expenses.index');
-Route::get('/expenses/create', RecurringExpenseForm::class)->name('expenses.create');
-Route::get('/expenses/{expense}/edit', RecurringExpenseForm::class)->name('expenses.edit');
+Route::get('/expenses', ExpenseList::class)->name('expenses.index');
+Route::get('/expenses/create', ExpenseForm::class)->name('expenses.create');
+Route::get('/expenses/{type}/{id}/edit', ExpenseForm::class)->name('expenses.edit');
 
 // Settings
 Route::get('/settings', Settings::class)->name('settings.index');

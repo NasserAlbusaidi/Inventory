@@ -12,6 +12,7 @@ use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
 use App\Models\LocationInventory;
 use Carbon\Carbon;
+use App\Models\OneTimeExpense;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -92,7 +93,7 @@ class Dashboard extends Component
 
     public function render()
     {
-         $this->lastUpdated = now();
+        $this->lastUpdated = now();
         // The cache key now includes the date range to ensure fresh data when dates change.
         $cacheKey = 'dashboard_data';
 
@@ -118,9 +119,31 @@ class Dashboard extends Component
 
             $costOfGoodsSold = $salesOrderItemsForCost->sum(fn($item) => $item->quantity * ($item->saleable->cost_price ?? 0));
 
-            $operationalCost = RecurringExpense::where('start_date', '<=', $this->endDate)
-                ->where(fn($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $this->endDate))
-                ->sum('monthly_cost');
+            // 1. Calculate One-Time Expenses within the period
+            $oneTimeOperationalCost = OneTimeExpense::whereBetween('expense_date', [$this->startDate, $this->endDate])->sum('amount');
+
+            // 2. Calculate prorated Recurring Expenses
+            $recurringExpenses = RecurringExpense::where('start_date', '<=', $this->endDate)
+                ->where(function ($query) {
+                    $query->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $this->startDate);
+                })
+                ->get();
+
+            $recurringOperationalCost = $recurringExpenses->sum(function ($expense) {
+                // Determine the overlap period for this specific expense
+                $periodStart = $this->startDate->max($expense->start_date);
+                $periodEnd = $this->endDate->min($expense->end_date ?? $this->endDate);
+
+                // Calculate the number of full and partial months in the overlap
+                $months = $periodStart->floatDiffInMonths($periodEnd);
+
+                return $expense->monthly_cost * $months;
+            });
+
+            // 3. Combine them for the total operational cost
+            $operationalCost = $oneTimeOperationalCost + $recurringOperationalCost;
+
 
             $totalPurchaseValue = (clone $purchaseOrdersInPeriod)->sum('total_amount');
             $totalCost = $totalPurchaseValue + $operationalCost;

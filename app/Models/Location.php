@@ -47,4 +47,11 @@ class Location extends Model
         // A location has many inventory stock records.
         return $this->hasMany(LocationInventory::class);
     }
+    /**
+     * Get the one-time expenses for the location.
+     */
+    public function oneTimeExpenses()
+    {
+        return $this->hasMany(OneTimeExpense::class);
+    }
 }
