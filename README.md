@@ -1,4 +1,6 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Inventory Management System
+
+<p align="center"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></p>
 
 <p align="center">
 <a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
@@ -7,55 +9,130 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
-## About Laravel
+This is a comprehensive and modern inventory management system built with Laravel, Livewire, and Alpine.js, designed to help businesses efficiently track products, manage stock across multiple locations, handle purchase and sales orders, and monitor expenses. The application offers a clean, responsive user interface and robust backend functionalities to streamline inventory operations.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+* **Dashboard & Analytics**:
+    * Real-time financial KPIs (Total Revenue, Total Costs, Net Profit, Profit Margin).
+    * Sales KPIs (Sales Count, Average Order Value, New Customers).
+    * Inventory & Purchasing KPIs (Total Stock Units, Inventory Value, Low/Out of Stock Products).
+    * Configurable low stock thresholds and revenue targets.
+* **Product Management**:
+    * Create, view, edit, and delete products.
+    * Support for products with and without variants (e.g., different sizes, colors).
+    * Bulk import products via CSV/Excel file with robust error handling.
+* **Inventory Control**:
+    * Track stock quantities per product variant and location.
+    * Manual stock adjustments (additions, deductions, setting new quantity).
+    * Detailed inventory movement history.
+* **Order Management**:
+    * Create and manage Purchase Orders (PO) with multiple items and statuses (draft, ordered, received, cancelled).
+    * Create and manage Sales Orders (SO) across various channels (e.g., Website, Boutique, Instagram).
+    * Automated stock deduction upon sales order fulfillment and addition upon purchase order receipt.
+* **Supplier & Location Management**:
+    * Manage supplier information.
+    * Define and manage multiple inventory locations.
+* **Expense Tracking**:
+    * Record and manage both recurring and one-time expenses associated with locations.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Technologies Used
 
-## Learning Laravel
+* **Backend**:
+    * PHP 8.2+
+    * Laravel 12.x
+    * Livewire 3.x for dynamic interfaces
+    * Doctrine DBAL for database schema manipulation
+    * Maatwebsite/Excel for importing products
+* **Frontend**:
+    * Alpine.js for reactive templating.
+    * Tailwind CSS for styling.
+    * Vite for asset bundling.
+* **Database**:
+    * MySQL, PostgreSQL, or SQLite compatible (configured in `config/database.php`).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Installation
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Follow these steps to get the project up and running on your local machine.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Prerequisites
 
-## Laravel Sponsors
+* PHP >= 8.2
+* Composer
+* Node.js & npm (or Yarn)
+* A database (MySQL, PostgreSQL, or SQLite recommended)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Steps
 
-### Premium Partners
+1.  **Clone the repository**:
+    ```bash
+    git clone [https://github.com/nasseralbusaidi/inventory.git](https://github.com/nasseralbusaidi/inventory.git)
+    cd inventory
+    ```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+2.  **Install PHP Dependencies**:
+    ```bash
+    composer install
+    ```
+
+3.  **Install JavaScript Dependencies**:
+    ```bash
+    npm install
+    # OR
+    # yarn install
+    ```
+
+4.  **Create and Configure your Environment File**:
+    Copy the `.env.example` file to `.env`:
+    ```bash
+    cp .env.example .env
+    ```
+    Open `.env` and configure your database connection (e.g., `DB_CONNECTION=mysql`, `DB_DATABASE=your_db_name`, `DB_USERNAME=your_username`, `DB_PASSWORD=your_password`). If using SQLite, ensure `database/database.sqlite` exists and set `DB_CONNECTION=sqlite`.
+
+5.  **Generate Application Key**:
+    ```bash
+    php artisan key:generate
+    ```
+
+6.  **Run Database Migrations and Seeders**:
+    This will create the necessary tables and populate them with some initial data (including default sales channels, locations, suppliers, categories, and products).
+    ```bash
+    php artisan migrate --seed
+    ```
+    *If you encounter issues with migrations, you might need to install `doctrine/dbal` (already included in `composer.json` but can be installed manually if needed).*
+
+7.  **Symlink Storage (if needed)**:
+    ```bash
+    php artisan storage:link
+    ```
+
+8.  **Build Frontend Assets**:
+    ```bash
+    npm run build
+    # OR
+    # yarn build
+    ```
+
+9.  **Start the Development Server**:
+    ```bash
+    php artisan serve
+    ```
+    The application will typically be available at `http://127.0.0.1:8000`.
+
+## Usage
+
+After installation, you can access the application through your web browser.
+
+* **Navigation**: Use the sidebar and top navigation to access different modules:
+    * **Catalog**: Manage Products, Categories, and Locations.
+    * **Operations**: Handle Purchase Orders, Sales Orders, and Suppliers.
+    * **Expenses**: Track recurring and one-time expenses.
+    * **Settings**: Configure application settings like KPI targets.
 
 ## Contributing
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Contributions are welcome! Please feel free to open issues or submit pull requests.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
