@@ -239,12 +239,19 @@
     </div>
 
     {{-- NEW: BARCODE SCANNER MODAL / OVERLAY --}}
-    <div x-show="isScanning" x-transition.opacity class="fixed inset-0 bg-gray-900/90 flex flex-col items-center justify-center z-50 p-4">
-        <div class="w-full max-w-lg mx-auto">
-            {{-- wire:ignore is ESSENTIAL here to prevent Livewire from breaking the scanner library --}}
-            <div id="reader" class="bg-gray-900 rounded-lg overflow-hidden shadow-2xl" wire:ignore></div>
-        </div>
-        <button @click="stopScan()" class="mt-6 px-8 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 shadow-lg">
+    <div x-show="isScanning" x-transition.opacity
+     class="fixed inset-0 bg-black flex flex-col items-center justify-center z-50 p-4">
+    {{--
+        This container ensures the reader and the button below have the same max-width
+        and provides consistent spacing.
+    --}}
+    <div class="w-full max-w-lg mx-auto space-y-5">
+        {{-- The camera view --}}
+        <div id="reader" class="w-full rounded-lg overflow-hidden shadow-2xl" wire:ignore></div>
+
+        {{-- The wider, full-width cancel button --}}
+        <button @click="stopScan()"
+                class="w-full px-6 py-3 bg-red-600 text-white text-lg font-bold rounded-lg hover:bg-red-700 shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-red-500">
             Cancel
         </button>
     </div>
