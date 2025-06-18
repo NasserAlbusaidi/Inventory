@@ -121,7 +121,6 @@ class Dashboard extends Component
 
             // 1. Calculate One-Time Expenses within the period
             $oneTimeOperationalCost = OneTimeExpense::whereBetween('expense_date', [$this->startDate, $this->endDate])->sum('amount');
-
             // 2. Calculate prorated Recurring Expenses
             $recurringExpenses = RecurringExpense::where('start_date', '<=', $this->endDate)
                 ->where(function ($query) {
@@ -129,19 +128,11 @@ class Dashboard extends Component
                         ->orWhere('end_date', '>=', $this->startDate);
                 })
                 ->get();
-
             $recurringOperationalCost = $recurringExpenses->sum(function ($expense) {
-                // Determine the overlap period for this specific expense
-                $periodStart = $this->startDate->max($expense->start_date);
-                $periodEnd = $this->endDate->min($expense->end_date ?? $this->endDate);
-
-                // Calculate the number of full and partial months in the overlap
-                $months = $periodStart->floatDiffInMonths($periodEnd);
-
-                return $expense->monthly_cost * $months;
+                // get the sum of all expenses
+                $total  = $expense->monthly_cost;
+                return $total;
             });
-
-            // 3. Combine them for the total operational cost
             $operationalCost = $oneTimeOperationalCost + $recurringOperationalCost;
 
 
