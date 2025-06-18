@@ -24,6 +24,7 @@ return [
         'children' => [
             ['name' => 'Expenses', 'route' => 'expenses.index', 'active' => 'expenses.*'],
             ['name' => 'Settings', 'route' => 'settings.index', 'active' => 'settings.*'],
+            ['name' => 'Sales Channels', 'route' => 'sales-channels.index', 'active' => 'sales-channels.*'],
         ],
     ],
 ];

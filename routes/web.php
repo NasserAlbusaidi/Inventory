@@ -16,6 +16,8 @@ use App\Livewire\Expense\ExpenseForm;
 use App\Livewire\Expense\ExpenseList;
 use App\Livewire\Supplier\SupplierForm;
 use App\Livewire\Inventory\StockAdjustmentForm;
+use App\Livewire\SalesChannel\SalesChannelList;
+use App\Livewire\SalesChannel\SalesChannelForm;
 use App\Livewire\PurchaseOrder\PurchaseOrderList;
 use App\Livewire\PurchaseOrder\PurchaseOrderForm;
 use App\Livewire\SalesOrder\SalesOrderList;
@@ -70,6 +72,11 @@ Route::get('/sales-orders/{salesOrder}', SalesOrderForm::class)->name('sales-ord
 Route::get('/expenses', ExpenseList::class)->name('expenses.index');
 Route::get('/expenses/create', ExpenseForm::class)->name('expenses.create');
 Route::get('/expenses/{type}/{id}/edit', ExpenseForm::class)->name('expenses.edit');
+
+// sales Channel
+Route::get('/sales-channels', SalesChannelList::class)->name('sales-channels.index');
+Route::get('/sales-channels/create', SalesChannelForm::class)->name('sales-channels.create');
+Route::get('/sales-channels/{salesChannel}/edit', SalesChannelForm::class)->name('sales-channels.edit');
 
 // Settings
 Route::get('/settings', Settings::class)->name('settings.index');

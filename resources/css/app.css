@@ -9,3 +9,15 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+
+.ts-dropdown {
+    /* Light Mode Background */
+    @apply bg-white;
+
+    /* Dark Mode Background */
+    @apply dark:bg-gray-800;
+
+    /* Optional: Add a subtle border */
+    @apply border border-gray-300 dark:border-gray-600;
+}
