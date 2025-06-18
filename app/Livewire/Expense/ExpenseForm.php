@@ -34,7 +34,7 @@ class ExpenseForm extends Component
         if ($this->expense_type === 'recurring') {
             return [
                 'description' => 'required|string|max:255',
-                'location_id' => 'required|exists:locations,id',
+                'location_id' => 'nullable|exists:locations,id',
                 'monthly_cost' => 'required|numeric|min:0',
                 'start_date' => 'required|date',
                 'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -42,7 +42,7 @@ class ExpenseForm extends Component
         } else { // 'one-time'
             return [
                 'description' => 'required|string|max:255',
-                'location_id' => 'required|exists:locations,id',
+                'location_id' => 'nullable|exists:locations,id',
                 'amount' => 'required|numeric|min:0',
                 'expense_date' => 'required|date',
             ];
@@ -86,7 +86,7 @@ class ExpenseForm extends Component
         if ($this->expense_type === 'recurring') {
             $data = [
                 'description' => $this->description,
-                'location_id' => $this->location_id,
+                'location_id' => $this->location_id ?: null,
                 'monthly_cost' => $this->monthly_cost,
                 'start_date' => $this->start_date,
                 'end_date' => $this->end_date,
@@ -95,7 +95,7 @@ class ExpenseForm extends Component
         } else { // 'one-time'
             $data = [
                 'description' => $this->description,
-                'location_id' => $this->location_id,
+                'location_id' => $this->location_id ?: null,
                 'amount' => $this->amount,
                 'expense_date' => $this->expense_date,
             ];
