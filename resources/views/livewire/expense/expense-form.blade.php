@@ -26,29 +26,28 @@
                     <div class="md:col-span-2">
                         <label for="expense_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expense Type</label>
                         <select id="expense_type" wire:model.live="expense_type"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 h-11"
+                                class="form-select mt-1 block w-full rounded-lg"
                                 {{ $expenseId ? 'disabled' : '' }}>
                             <option value="recurring">Recurring</option>
                             <option value="one-time">One-Time</option>
                         </select>
                          @if($expenseId)
-                            <p class="text-xs text-gray-500 mt-1">Expense type cannot be changed during editing.</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Expense type cannot be changed during editing.</p>
                         @endif
                     </div>
 
                     {{-- Common Fields --}}
                     <div class="md:col-span-2">
-                        <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                        <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description <span class="text-red-500">*</span></label>
                         <textarea id="description" wire:model.lazy="description" rows="3"
-                                  class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                                  class="form-textarea mt-1 block w-full rounded-lg"
                                   placeholder="e.g., Monthly Rent for Warehouse, New Office Printer"></textarea>
                         @error('description') <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
                         <label for="location_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location (Optional)</label>
-                        <select id="location_id" wire:model="location_id"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 h-11">
+                        <select id="location_id" wire:model="location_id" class="form-select mt-1 block w-full rounded-lg">
                             <option value="">Select a Location</option>
                             @foreach($allLocations as $location)
                                 <option value="{{ $location->id }}">{{ $location->name }}</option>
@@ -59,23 +58,35 @@
 
                     {{-- Conditional Recurring Fields --}}
                     @if ($expense_type === 'recurring')
+                        {{-- (NEW) Frequency Dropdown --}}
                         <div>
-                            <label for="monthly_cost" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Cost (OMR)</label>
+                            <label for="frequency" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency <span class="text-red-500">*</span></label>
+                            <select id="frequency" wire:model.live="frequency" class="form-select mt-1 block w-full rounded-lg">
+                                @foreach ($frequencies as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('frequency') <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
+                        </div>
+
+                        {{-- (UPDATED) Cost Input with Dynamic Label --}}
+                        <div>
+                            <label for="monthly_cost" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ $frequencies[$frequency] ?? 'Monthly' }} Cost (OMR) <span class="text-red-500">*</span></label>
                             <input type="number" step="0.01" id="monthly_cost" wire:model.lazy="monthly_cost"
-                                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                                   class="form-input mt-1 block w-full rounded-lg"
                                    placeholder="e.g., 550.00">
                             @error('monthly_cost') <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
+
                         <div>
-                            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
-                             <input id="start_date" type="date" wire:model.lazy="start_date"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+                            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date <span class="text-red-500">*</span></label>
+                             <input id="start_date" type="date" wire:model.lazy="start_date" class="form-input mt-1 block w-full rounded-lg">
                             @error('start_date') <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
+
                         <div>
                             <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date (Optional)</label>
-                             <input id="end_date" type="date" wire:model.lazy="end_date"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+                             <input id="end_date" type="date" wire:model.lazy="end_date" class="form-input mt-1 block w-full rounded-lg">
                             @error('end_date') <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
                     @endif
@@ -83,16 +94,16 @@
                     {{-- Conditional One-Time Fields --}}
                     @if ($expense_type === 'one-time')
                         <div>
-                            <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (OMR)</label>
+                            <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (OMR) <span class="text-red-500">*</span></label>
                             <input type="number" step="0.01" id="amount" wire:model.lazy="amount"
-                                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2"
+                                   class="form-input mt-1 block w-full rounded-lg"
                                    placeholder="e.g., 150.00">
                             @error('amount') <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
                         <div class="md:col-start-1">
-                            <label for="expense_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expense Date</label>
+                            <label for="expense_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expense Date <span class="text-red-500">*</span></label>
                              <input id="expense_date" type="date" wire:model.lazy="expense_date"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2">
+                                    class="form-input mt-1 block w-full rounded-lg">
                             @error('expense_date') <span class="text-red-500 dark:text-red-400 text-xs mt-1">{{ $message }}</span> @enderror
                         </div>
                     @endif
