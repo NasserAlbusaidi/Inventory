@@ -60,8 +60,8 @@ class SupplierForm extends Component
             'contact_person' => $this->contact_person,
             'email' => $this->email,
             'phone' => $this->phone,
-            'lead_time_days' => $this->lead_time_days,
-            'payment_terms' => $this->payment_terms,
+            'lead_time_days' => $this->lead_time_days ?? 5,
+            'payment_terms' => $this->payment_terms ?? 'Net 30',
         ]);
         $this->supplierInstance->save();
 
