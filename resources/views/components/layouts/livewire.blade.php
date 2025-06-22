@@ -1,5 +1,15 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+{{-- add dark mode --}}
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
+   x-data="{
+        darkMode: localStorage.getItem('darkMode') === 'true'
+    }"
+      x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))"
+      :class="{ 'dark': darkMode }">
+    <x-slot name="title">
+        {{ $title ?? 'Inventory' }}
+    </x-slot>
+
 
 <head>
     <meta charset="utf-8">
