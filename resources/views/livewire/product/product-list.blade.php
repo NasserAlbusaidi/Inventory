@@ -29,6 +29,29 @@
         {{-- =================================================== --}}
         {{-- Flash Messages --}}
         {{-- =================================================== --}}
+        @if($allCategoriesList->isEmpty())
+            <div class="mb-6 bg-yellow-50 dark:bg-yellow-800 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 shadow-md rounded-md"
+                role="alert">
+                <div class="flex">
+                    <div class="flex-shrink-0"><svg class="h-5 w-5 text-yellow-400 dark:text-yellow-500"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                            aria-hidden="true">
+                            {{-- exclamation mark --}}
+                           <path fill-rule="evenodd"
+                                        d="M8.257 3.099c.636-1.214 2.43-1.214 3.066 0l5.857 11.157a1.75 1.75 0 01-1.533 2.493H3.934a1.75 1.75 0 01-1.533-2.493L8.257 3.099zM9 12a1 1 0 112 0 1 1 0 01-2 0zm1-4a1 1 0 00-1 1v2a1 1 0 102 0V9a1 1 0 00-1-1z"
+                                        clip-rule="evenodd" />
+                        </svg></div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700 dark:text-yellow-200">No categories found. Please create a category before adding products.</p>
+                        <span
+                            class=" underline mt-2 inline-flex items-center px-3 py-1 text-sm  bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200">
+                            <a href="{{ route('categories.create') }}" class="hover:underline">Create Category</a>
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+        @endif
         @if (session()->has('message'))
             <div class="mb-6 bg-green-50 dark:bg-green-800 border-l-4 border-green-400 dark:border-green-600 p-4 shadow-md rounded-md"
                 role="alert">

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Product;
 
+use App\Models\Activity;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -47,7 +48,6 @@ class ProcessProductImport
             }
         }
 
-        Log::info("Processed " . count($productGroups) . " product groups for import.");
 
         DB::transaction(function () use ($productGroups, &$errors, &$successCount) {
             foreach ($productGroups as $group) {
@@ -113,13 +113,20 @@ class ProcessProductImport
                         }
                     }
                     $successCount++;
-                    Log::info("Successfully imported product '{$productName}' with SKU '{$mainInfo['sku']}'.");
                 } catch (\Exception $e) {
                     Log::error("Import Error for product '{$productName}': " . $e->getMessage());
                     $errors["Row {$group['rowIndex']} ({$productName})"] = "A server error occurred: " . $e->getMessage();
                 }
             }
         });
+
+        // Log the import activity
+        if ($successCount > 0) {
+            Activity::create([
+                'type' => 'product_import',
+                'description' => "Imported {$successCount} products and their variants.",
+            ]);
+        }
 
         return [$errors, $successCount];
     }

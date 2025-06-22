@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Supplier;
 
+use App\Models\Activity;
 use App\Models\Supplier;
 use Livewire\Component;
 
@@ -64,7 +65,10 @@ class SupplierForm extends Component
             'payment_terms' => $this->payment_terms ?? 'Net 30',
         ]);
         $this->supplierInstance->save();
-
+        Activity::create([
+            'type' => $this->supplierInstance->wasRecentlyCreated ? 'supplier_created' : 'supplier_updated',
+            'description' => 'Supplier ' . ($this->supplierInstance->wasRecentlyCreated ? 'created' : 'updated') . ': ' . $this->name,
+        ]);
         session()->flash('message', 'Supplier ' . ($this->supplierInstance->wasRecentlyCreated ? 'created' : 'updated') . ' successfully.');
 
         return redirect()->route('suppliers.index');

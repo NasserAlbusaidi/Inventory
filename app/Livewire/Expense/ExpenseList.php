@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Expense;
 
+use App\Models\Activity;
 use App\Models\RecurringExpense;
 use App\Models\OneTimeExpense;
 use Illuminate\Support\Facades\DB;
@@ -20,9 +21,19 @@ class ExpenseList extends Component
     public function delete($id, $type)
     {
         if ($type === 'recurring') {
+            $expenseDescription = RecurringExpense::find($id)?->description;
             RecurringExpense::find($id)?->delete();
+            Activity::create([
+                'type' => 'recurring_expense_deleted',
+                'description' => 'Recurring expense deleted: ' . $expenseDescription,
+            ]);
         } elseif ($type === 'one-time') {
+            $expenseDescription = OneTimeExpense::find($id)?->description;
             OneTimeExpense::find($id)?->delete();
+            Activity::create([
+                'type' => 'one_time_expense_deleted',
+                'description' => 'One-time expense deleted: ' . $expenseDescription,
+            ]);
         }
         session()->flash('message', 'Expense deleted successfully.');
     }

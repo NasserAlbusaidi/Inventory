@@ -3,6 +3,7 @@
 
 namespace App\Livewire\Product;
 
+use App\Models\Activity;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\LocationInventory;
@@ -66,6 +67,18 @@ class AdjustStockModal extends Component
         ]);
 
         $inventory->increment('stock', $adjustmentQuantity);
+
+        Activity::create([
+            'type' => 'stock_adjustment',
+            'description' => sprintf(
+                '%s stock for %s at %s by %d. Notes: %s',
+                $this->adjustment_type === 'addition' ? 'Added' : 'Deducted',
+                $this->product->name,
+                $inventory->location->name,
+                abs($adjustmentQuantity),
+                $this->notes
+            ),
+        ]);
 
         $this->dispatch('stockUpdated');
     }

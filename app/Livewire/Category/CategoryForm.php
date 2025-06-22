@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Category;
 
+use App\Models\Activity;
 use App\Models\Category;
 use Livewire\Component;
 
@@ -44,6 +45,12 @@ class CategoryForm extends Component
         $this->categoryInstance->name = $this->name;
         $this->categoryInstance->description = $this->description;
         $this->categoryInstance->save();
+
+        // Save Activity Log
+        Activity::create([
+            'type' => $this->categoryInstance->wasRecentlyCreated ? 'category_created' : 'category_updated',
+            'description' => 'Category ' . ($this->categoryInstance->wasRecentlyCreated ? 'created' : 'updated') . ': ' . $this->name,
+        ]);
 
         session()->flash('message', 'Category ' . ($this->categoryInstance->wasRecentlyCreated ? 'created' : 'updated') . ' successfully.');
         return redirect()->route('categories.index');

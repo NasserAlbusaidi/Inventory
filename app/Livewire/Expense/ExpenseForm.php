@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Expense;
 
+use App\Models\Activity;
 use App\Models\Location;
 use App\Models\RecurringExpense;
 use App\Models\OneTimeExpense; // <-- Add this
@@ -117,6 +118,11 @@ class ExpenseForm extends Component
                 'end_date' => $this->end_date,
             ];
             RecurringExpense::updateOrCreate(['id' => $this->expenseId], $data);
+
+            Activity::create([
+                'type' => $this->expenseId ? 'recurring_expense_updated' : 'recurring_expense_created',
+                'description' => $this->expenseId ? 'Recurring expense updated: ' . $this->description : 'Recurring expense created: ' . $this->description,
+            ]);
         } else { // 'one-time'
             $data = [
                 'description' => $this->description,
@@ -125,6 +131,10 @@ class ExpenseForm extends Component
                 'expense_date' => $this->expense_date,
             ];
             OneTimeExpense::updateOrCreate(['id' => $this->expenseId], $data);
+            Activity::create([
+                'type' => $this->expenseId ? 'one_time_expense_updated' : 'one_time_expense_created',
+                'description' => $this->expenseId ? 'One-time expense updated: ' . $this->description : 'One-time expense created: ' . $this->description,
+            ]);
         }
 
         session()->flash('message', 'Expense saved successfully.');

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Supplier;
 
+use App\Models\Activity;
 use App\Models\Supplier; //
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -16,11 +17,16 @@ class SupplierList extends Component
     public function deleteSupplier($supplierId)
     {
         $supplier = Supplier::find($supplierId);
+        $supplierName = $supplier ? $supplier->name : 'Unknown Supplier';
         if ($supplier) {
             // Consider implications: The purchase_orders table has onDelete('cascade') for supplier_id.
             // This means deleting a supplier will also delete all their associated purchase orders.
             // This might be desired, or you might want to add a check here if $supplier->purchaseOrders()->count() > 0
             $supplier->delete();
+            Activity::create([
+                'type' => 'supplier_deleted',
+                'description' => "Supplier '{$supplierName}' and their associated purchase orders deleted.",
+            ]);
             session()->flash('message', 'Supplier and their associated purchase orders deleted successfully.');
         } else {
             session()->flash('error', 'Supplier not found.');

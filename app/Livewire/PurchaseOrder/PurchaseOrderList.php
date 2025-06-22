@@ -2,7 +2,10 @@
 
 namespace App\Livewire\PurchaseOrder;
 
+use App\Models\Activity;
+use App\Models\Location;
 use App\Models\PurchaseOrder; //
+use App\Models\Supplier;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -13,11 +16,20 @@ class PurchaseOrderList extends Component
     public $search = '';
     public $statusFilter = '';
 
+    public $allSuppliers = [];
+    public $allLocations = [];
+
     protected $queryString = [
         'search' => ['except' => ''],
         'statusFilter' => ['except' => ''],
         'page' => ['except' => 1],
     ];
+
+    public function mount()
+    {
+        $this->allSuppliers = Supplier::all();
+        $this->allLocations = Location::all();
+    }
 
     public function deletePurchaseOrder($purchaseOrderId)
     {
@@ -27,8 +39,13 @@ class PurchaseOrderList extends Component
             // Consider implications if items were partially received.
             // Usually, 'cancelled' status is preferred over hard deletion for auditable records.
             if ($purchaseOrder->status === 'draft' || $purchaseOrder->status === 'cancelled') {
-                $purchaseOrder->items()->delete(); // Manually delete items if not cascaded or to trigger events
+                $orderID = $purchaseOrder->order_number;
+                $purchaseOrder->items()->delete();
                 $purchaseOrder->delete();
+                Activity::create([
+                    'type' => 'purchase_order_deleted',
+                    'description' => "Purchase Order #{$orderID} deleted.",
+                ]);
                 session()->flash('message', 'Purchase Order deleted successfully.');
             } else {
                 session()->flash('error', 'Only draft or cancelled purchase orders can be deleted. Consider cancelling it instead.');
@@ -51,6 +68,7 @@ class PurchaseOrderList extends Component
 
     public function render()
     {
+
         $purchaseOrders = PurchaseOrder::with(['supplier', 'items']) // Eager load supplier and items
             ->when($this->search, function ($query) {
                 $query->where('order_number', 'like', '%' . $this->search . '%')

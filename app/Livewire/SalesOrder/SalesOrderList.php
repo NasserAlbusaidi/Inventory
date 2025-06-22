@@ -2,6 +2,8 @@
 
 namespace App\Livewire\SalesOrder;
 
+use App\Models\Activity;
+use App\Models\Location;
 use App\Models\SalesChannel;
 use App\Models\SalesOrder; //
 use Livewire\Component;
@@ -15,10 +17,13 @@ class SalesOrderList extends Component
     public $statusFilter = '';
     public $channelFilter = '';
 
+
+
     // From SalesOrder model migration: status default 'completed', channel enum ['shopify', 'boutique', 'other']
     public $soStatuses = ['pending', 'processing', 'completed', 'shipped', 'cancelled', 'refunded']; // Example statuses
     public $soChannels;
-
+    public $allLocations = [];
+    public $allChannels = [];
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -35,8 +40,13 @@ class SalesOrderList extends Component
             // Deleting SO will also delete its items due to onDelete('cascade')
             // This does NOT currently revert stock. Stock management for cancellations/returns is a more complex feature.
             if (in_array($salesOrder->status, ['pending', 'cancelled'])) {
+                $orderID = $salesOrder->order_number;
                 $salesOrder->items()->delete();
                 $salesOrder->delete();
+                Activity::create([
+                    'type' => 'sales_order_deleted',
+                    'description' => "Sales Order #{$orderID} deleted.",
+                ]);
                 session()->flash('message', 'Sales Order deleted successfully.');
             } else {
                 session()->flash('error', 'Only pending or cancelled sales orders can be deleted. Consider cancelling or refunding.');
@@ -54,7 +64,9 @@ class SalesOrderList extends Component
 
     public function render()
     {
-        $this->soChannels = SalesChannel::all()->pluck('name', 'id')->toArray(); // Fetch all sales channels
+        $this->soChannels = SalesChannel::all()->pluck('name', 'id')->toArray();
+        $this->allChannels = SalesChannel::all();
+        $this->allLocations = Location::all();
         $salesOrders = SalesOrder::with(['location', 'items', 'salesChannel'])
             ->when($this->search, function ($query) {
                 $query->where('order_number', 'like', '%' . $this->search . '%')

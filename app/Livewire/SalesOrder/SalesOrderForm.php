@@ -2,6 +2,7 @@
 
 namespace App\Livewire\SalesOrder;
 
+use App\Models\Activity;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
 use App\Models\Location;
@@ -389,6 +390,16 @@ class SalesOrderForm extends Component
         });
 
         Cache::forget('dashboard_data');
+        Activity::create([
+            'type' => $isNewOrder ? 'sales_order_created' : 'sales_order_updated',
+            'description' => sprintf(
+                '%s Sales Order #%s by %s at %s',
+                $isNewOrder ? 'Created' : 'Updated',
+                $this->salesOrderInstance->order_number,
+                $this->customer_name ?: 'Unknown Customer',
+                $this->location_id ? Location::find($this->location_id)->name : 'Unknown Location'
+            ),
+        ]);
         session()->flash('message', 'Sales Order saved successfully.');
         if ($stockUpdated) {
             session()->flash('stock_update_message', 'Stock levels have been adjusted accordingly.');

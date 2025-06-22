@@ -2,6 +2,7 @@
 
 namespace App\Livewire\SalesChannel;
 
+use App\Models\Activity;
 use App\Models\SalesChannel;
 use Livewire\Component;
 
@@ -36,9 +37,17 @@ class SalesChannelForm extends Component
 
         if ($this->salesChannelInstance->exists) {
             $this->salesChannelInstance->update($validatedData);
+            Activity::create([
+                'type' => 'sales_channel_updated',
+                'description' => "Sales Channel '{$this->salesChannelInstance->name}' updated.",
+            ]);
             session()->flash('message', 'Sales Channel updated successfully.');
         } else {
             SalesChannel::create($validatedData);
+            Activity::create([
+                'type' => 'sales_channel_created',
+                'description' => "Sales Channel '{$this->name}' created.",
+            ]);
             session()->flash('message', 'Sales Channel created successfully.');
         }
 

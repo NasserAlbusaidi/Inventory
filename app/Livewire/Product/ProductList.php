@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Product;
 
+use App\Models\Activity;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Location; // <-- ADDED
@@ -162,6 +163,17 @@ class ProductList extends Component
             });
 
             $name = $adjustable->name ?? $adjustable->variant_name;
+            Activity::create([
+                'type' => 'stock_adjustment',
+                'description' => sprintf(
+                    '%s stock for %s at %s by %d. Notes: %s',
+                    $this->adjustment_type === 'addition' ? 'Added' : ($this->adjustment_type === 'deduction' ? 'Deducted' : 'Set'),
+                    $name,
+                    Location::find($this->location_id)->name,
+                    abs($this->quantity),
+                    $this->notes
+                ),
+            ]);
             session()->flash('message', "Stock for '{$name}' has been successfully adjusted.");
             $this->closeAdjustStockModal();
 
@@ -180,6 +192,7 @@ class ProductList extends Component
     public function confirmDelete($productId)
     {
         $this->productToDelete = Product::find($productId);
+
         $this->showDeleteModal = true;
     }
 
@@ -228,6 +241,10 @@ class ProductList extends Component
         try {
             $productName = $this->productToDelete->name;
             $this->productToDelete->delete();
+            Activity::create([
+                'type' => 'product_deleted',
+                'description' => "Product deleted: {$productName}",
+            ]);
             session()->flash('message', "Product '{$productName}' has been successfully deleted.");
         } catch (\Exception $e) {
             Log::error("Unexpected error deleting product {$this->productToDelete->id}: " . $e->getMessage());

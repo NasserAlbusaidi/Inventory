@@ -19,6 +19,50 @@
         {{-- =================================================== --}}
         {{-- Flash Messages --}}
         {{-- =================================================== --}}
+        @if ($allLocations->isEmpty())
+            <div class="mb-6 bg-yellow-50 dark:bg-yellow-800/50 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 shadow-md rounded-md"
+                role="alert">
+                <div class="flex">
+                    <div class="flex-shrink-0"><svg class="h-5 w-5 text-yellow-500 dark:text-yellow-400"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                            aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                                clip-rule="evenodd" />
+                        </svg></div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700 dark:text-yellow-200">No locations found! Please create a
+                            location first.</p>
+                        <span
+                            class=" underline mt-2 inline-flex items-center px-3 py-1 text-sm  bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200">
+                            <a href="{{ route('locations.create') }}">Create Location</a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        @endif
+        @if($allChannels->isEmpty())
+            <div class="mb-6 bg-yellow-50 dark:bg-yellow-800/50 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 shadow-md rounded-md"
+                role="alert">
+                <div class="flex">
+                    <div class="flex-shrink-0"><svg class="h-5 w-5 text-yellow-500 dark:text-yellow-400"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                            aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                                clip-rule="evenodd" />
+                        </svg></div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700 dark:text-yellow-200">No sales channels found! Please create a
+                            sales channel first.</p>
+                        <span
+                            class=" underline mt-2 inline-flex items-center px-3 py-1 text-sm bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200">
+                            <a href="{{ route('sales-channels.create') }}">Create Sales Channel</a>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        @endif
         @if (session()->has('message'))
             <div class="mb-6 bg-green-50 dark:bg-green-800/50 border-l-4 border-green-400 dark:border-green-600 p-4 shadow-md rounded-md" role="alert">
                 <div class="flex">

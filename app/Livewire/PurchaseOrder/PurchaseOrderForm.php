@@ -2,6 +2,7 @@
 
 namespace App\Livewire\PurchaseOrder;
 
+use App\Models\Activity;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
@@ -375,6 +376,16 @@ class PurchaseOrderForm extends Component
 
         // Final checks and redirect
         cache()->forget('dashboard_data');
+        Activity::create([
+            'type' => $isNewOrder ? 'purchase_order_created' : 'purchase_order_updated',
+            'description' => sprintf(
+                '%s Purchase Order: %s , Cost: %.2f, Status: %s',
+                $isNewOrder ? 'Created' : 'Updated',
+                $this->purchaseOrderInstance->order_number,
+                $this->purchaseOrderInstance->total_amount,
+                $this->purchaseOrderInstance->status
+            ),
+        ]);
         session()->flash('message', 'Purchase Order ' . ($this->purchaseOrderInstance->wasRecentlyCreated ? 'created' : 'updated') . ' successfully.');
 
         // Add a specific message if stock was updated

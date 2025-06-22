@@ -2,6 +2,7 @@
 
 namespace App\Livewire\SalesChannel;
 
+use App\Models\Activity;
 use App\Models\Location;
 use App\Models\SalesChannel;
 use Livewire\Component;
@@ -13,7 +14,12 @@ class SalesChannelList extends Component
 
     public function delete(SalesChannel $salesChannel)
     {
+        $salesChannelName = $salesChannel->name;
         $salesChannel->delete();
+        Activity::create([
+            'type' => 'sales_channel_deleted',
+            'description' => "Sales Channel '{$salesChannelName}' deleted.",
+        ]);
         session()->flash('message', 'Sales Channel deleted successfully.');
     }
 
@@ -25,6 +31,10 @@ class SalesChannelList extends Component
             if (!$salesChannel) {
                 $salesChannel = SalesChannel::create(['name' => $location]);
             }
+            Activity::create([
+                'type' => 'sales_channel_created',
+                'description' => "Sales Channel '{$salesChannel->name}' created for location '{$locationInstance->name}'.",
+            ]);
             session()->flash('message', 'Sales Channel added successfully.');
         } else {
             session()->flash('error', 'Location not found.');

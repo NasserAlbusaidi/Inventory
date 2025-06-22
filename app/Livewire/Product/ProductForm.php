@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Product;
 
+use App\Models\Activity;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\ProductVariant;
@@ -187,6 +188,16 @@ class ProductForm extends Component
                     if ($this->product->exists) $this->product->variants()->whereNotIn('id', $variantIdsToKeep)->delete();
                 }
             });
+
+            Activity::create([
+                'type' => $this->product->exists ? 'product_updated' : 'product_created',
+                'description' => sprintf(
+                    '%s product: %s (ID: %d)',
+                    $this->product->exists ? 'Updated' : 'Created',
+                    $this->product->name,
+                    $this->product->id
+                ),
+            ]);
 
             session()->flash('message', 'Product saved successfully.');
             return redirect()->route('products.index');

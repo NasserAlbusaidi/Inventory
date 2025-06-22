@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Location;
 
+use App\Models\Activity;
 use App\Models\Location;
 use Livewire\Component;
 
@@ -53,6 +54,12 @@ class LocationForm extends Component
         $this->locationInstance->name = $this->name;
         $this->locationInstance->description = $this->description;
         $this->locationInstance->save();
+
+        // Save Activity Log
+        Activity::create([
+            'type' => $this->locationInstance->wasRecentlyCreated ? 'location_created' : 'location_updated',
+            'description' => 'Location ' . ($this->locationInstance->wasRecentlyCreated ? 'created' : 'updated') . ': ' . $this->name,
+        ]);
 
         session()->flash('message', 'Location ' . ($this->locationInstance->wasRecentlyCreated ? 'created' : 'updated') . ' successfully.');
 

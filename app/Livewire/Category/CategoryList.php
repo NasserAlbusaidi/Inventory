@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Category;
 
+use App\Models\Activity;
 use App\Models\Category; //
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -38,6 +39,10 @@ class CategoryList extends Component
             // Products associated with this category will have their category_id set to null
             // due to onDelete('set null') in the products migration.
             $category->delete();
+            Activity::create([
+                'type' => 'category_deleted',
+                'description' => 'Category deleted: ' . $category->name,
+            ]);
             session()->flash('message', 'Category deleted successfully.');
         } else {
             session()->flash('error', 'Category not found.');

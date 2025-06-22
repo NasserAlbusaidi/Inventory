@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Location;
 
+use App\Models\Activity;
 use App\Models\Location;
 use App\Models\LocationInventory; // <-- Add this
 use Livewire\Component;
@@ -38,7 +39,12 @@ class LocationList extends Component
         }
 
         if ($location) {
+            $locationName = $location->name;
             $location->delete();
+            Activity::create([
+                'type' => 'location_deleted',
+                'description' => "Location deleted: {$locationName}",
+            ]);
             session()->flash('message', 'Location deleted successfully.');
         } else {
             session()->flash('error', 'Location not found.');
