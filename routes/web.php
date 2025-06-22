@@ -81,5 +81,9 @@ Route::get('/sales-channels/{salesChannel}/edit', SalesChannelForm::class)->name
 // Settings
 Route::get('/settings', Settings::class)->name('settings.index');
 
+// Activity Logs
+Route::get('/activity-logs', App\Livewire\ActivityLogs::class)->name('activity.index');
+
+
 
 // ... (other routes)
