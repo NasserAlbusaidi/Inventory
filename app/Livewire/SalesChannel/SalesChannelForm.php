@@ -23,8 +23,8 @@ class SalesChannelForm extends Component
     public function mount($salesChannel = null)
     {
         if ($salesChannel) {
-            // Using route model binding, $salesChannel is already an instance
-            $this->salesChannelInstance = $salesChannel;
+
+            $this->salesChannelInstance = SalesChannel::find($salesChannel);
             $this->name = $this->salesChannelInstance->name;
         } else {
             $this->salesChannelInstance = new SalesChannel();
