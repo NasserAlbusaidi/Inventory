@@ -18,6 +18,7 @@ use App\Livewire\Supplier\SupplierForm;
 use App\Livewire\Inventory\StockAdjustmentForm;
 use App\Livewire\SalesChannel\SalesChannelList;
 use App\Livewire\SalesChannel\SalesChannelForm;
+use App\Livewire\SalesOrder\SalesImport;
 use App\Livewire\PurchaseOrder\PurchaseOrderList;
 use App\Livewire\PurchaseOrder\PurchaseOrderForm;
 use App\Livewire\SalesOrder\SalesOrderList;
@@ -65,8 +66,11 @@ Route::get('/purchase-orders/{purchaseOrder}', PurchaseOrderForm::class)->name('
 // Sales Order Management Routes
 Route::get('/sales-orders', SalesOrderList::class)->name('sales-orders.index');
 Route::get('/sales-orders/create', SalesOrderForm::class)->name('sales-orders.create');
+
+Route::get('/sales-orders/import', SalesImport::class)->name('sales-orders.import');
 Route::get('/sales-orders/{salesOrder}/edit', SalesOrderForm::class)->name('sales-orders.edit');
 Route::get('/sales-orders/{salesOrder}', SalesOrderForm::class)->name('sales-orders.show');
+
 
 
 Route::get('/expenses', ExpenseList::class)->name('expenses.index');

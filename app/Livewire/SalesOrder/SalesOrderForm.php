@@ -220,13 +220,31 @@ class SalesOrderForm extends Component
             return;
         }
 
-        if (preg_match('/items\.(\d+)\.selected_item_key/', $propertyName, $matches)) {
+       if (preg_match('/items\.(\d+)\.selected_item_key/', $propertyName, $matches)) {
             $index = (int)$matches[1];
             $key = $this->items[$index]['selected_item_key'];
+
+            if (empty($key)) {
+                $this->items[$index]['price_per_unit'] = 0.00;
+                $this->items[$index]['available_stock'] = 0;
+                $this->calculateTotalAmount();
+                return;
+            }
+
             $selectedItem = $this->allSellableItems->firstWhere('key', $key);
 
             if ($selectedItem) {
-                $this->items[$index]['price_per_unit'] = (float)$selectedItem['price'];
+                // Check if the item line is new (it won't have a database 'id').
+                // The 'id' is added in `loadExistingSalesOrder`. New items added via `addItem` won't have it.
+                $isNewLineItem = !isset($this->items[$index]['id']) || is_null($this->items[$index]['id']);
+
+                // ONLY set the price automatically if it's a brand new line.
+                // This preserves the historical price for existing items.
+                if ($isNewLineItem) {
+                    $this->items[$index]['price_per_unit'] = (float)$selectedItem['price'];
+                }
+
+                // Always update the available stock and reset quantity for a new selection.
                 $this->items[$index]['available_stock'] = $selectedItem['stock'];
                 $this->items[$index]['quantity'] = 1;
             } else {
@@ -234,7 +252,6 @@ class SalesOrderForm extends Component
                 $this->items[$index]['available_stock'] = 0;
             }
         }
-        $this->calculateTotalAmount();
 
         if (preg_match('/items\.(\d+)\.(quantity|price_per_unit)/', $propertyName)) {
             $this->calculateTotalAmount();
