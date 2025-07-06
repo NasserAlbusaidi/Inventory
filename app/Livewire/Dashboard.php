@@ -98,7 +98,6 @@ class Dashboard extends Component
         $cacheKey = 'dashboard_data';
 
         // Increased cache time slightly as this is a heavy query.
-        $data = Cache::remember($cacheKey, now()->addMinutes(1), function () {
 
             // --- Date and Comparison Period Setup ---
             $durationInDays = $this->endDate->diffInDays($this->startDate);
@@ -232,7 +231,7 @@ class Dashboard extends Component
             $pendingPOCount = PurchaseOrder::where('status', 'ordered')->count();
 
             // --- Assembling the final data array ---
-            return [
+            return view('livewire.dashboard', [
                 'totalRevenue' => $totalRevenue,
                 'costOfGoodsSold' => $costOfGoodsSold,
                 'netProfit' => $netProfit,
@@ -273,11 +272,6 @@ class Dashboard extends Component
                 // (FIXED) Use the correct alias 'channel_name' for the labels
                 'salesByChannelLabels' => $salesByChannel->pluck('channel_name'),
                 'salesByChannelData' => $salesByChannel->pluck('count'),
-            ];
-        });
-
-        $this->updateCounter++;
-        $this->dispatch('update-charts', data: $data);
-        return view('livewire.dashboard', $data);
+            ]);
     }
 }
