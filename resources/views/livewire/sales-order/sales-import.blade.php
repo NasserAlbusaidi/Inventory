@@ -1,5 +1,31 @@
 <div class="py-8">
-    <div class="max-w-full mx-auto sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+        {{-- Step Progress Bar --}}
+        <div class="flex items-center justify-center mb-8">
+            <div class="flex w-full max-w-xl">
+                <div class="flex-1 flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 {{ $step === 1 ? 'bg-indigo-600 scale-110 shadow-lg' : 'bg-gray-300 dark:bg-gray-700' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+                    </div>
+                    <span class="mt-2 text-xs font-semibold {{ $step === 1 ? 'text-indigo-600' : 'text-gray-500 dark:text-gray-400' }}">Upload</span>
+                </div>
+                <div class="flex-1 h-1 bg-gradient-to-r from-indigo-500 to-indigo-200 dark:from-indigo-700 dark:to-indigo-900 mx-2 my-4 rounded"></div>
+                <div class="flex-1 flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 {{ $step === 2 ? 'bg-indigo-600 scale-110 shadow-lg' : 'bg-gray-300 dark:bg-gray-700' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <span class="mt-2 text-xs font-semibold {{ $step === 2 ? 'text-indigo-600' : 'text-gray-500 dark:text-gray-400' }}">Map</span>
+                </div>
+                <div class="flex-1 h-1 bg-gradient-to-r from-indigo-500 to-indigo-200 dark:from-indigo-700 dark:to-indigo-900 mx-2 my-4 rounded"></div>
+                <div class="flex-1 flex flex-col items-center">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 {{ $step === 3 ? 'bg-indigo-600 scale-110 shadow-lg' : 'bg-gray-300 dark:bg-gray-700' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg>
+                    </div>
+                    <span class="mt-2 text-xs font-semibold {{ $step === 3 ? 'text-indigo-600' : 'text-gray-500 dark:text-gray-400' }}">Dates</span>
+                </div>
+            </div>
+        </div>
+
         {{-- =================================================================== --}}
         {{-- STEP 1: UPLOAD FORM                                                 --}}
         {{-- =================================================================== --}}
@@ -35,7 +61,7 @@
                     <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
                             <label for="location" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Fulfillment Location</label>
-                            <select id="location" wire:model="location_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                            <select id="location" wire:model="location_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                                 @foreach($allLocations as $location)
                                     <option value="{{ $location->id }}">{{ $location->name }}</option>
                                 @endforeach
@@ -44,7 +70,7 @@
                         </div>
                         <div>
                             <label for="sales_channel" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Sales Channel</label>
-                            <select id="sales_channel" wire:model="sales_channel_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                            <select id="sales_channel" wire:model="sales_channel_id" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
                                @foreach($allSalesChannels as $channel)
                                     <option value="{{ $channel->id }}">{{ $channel->name }}</option>
                                 @endforeach
@@ -121,7 +147,14 @@
                             <tr wire:key="unmapped-{{ $index }}" class="divide-x divide-gray-200 dark:divide-gray-600">
                                 <td class="py-4 px-4 align-top"><p class="font-mono text-sm text-gray-700 dark:text-gray-300">{{ $item['raw_name'] }}</p><p class="text-xs text-gray-500 mt-1">Sold: <span class="font-semibold">{{ $item['count'] }}</span> | Total: <span class="font-semibold">{{ number_format($item['total_price'], 3) }}</span></p></td>
                                 <td class="py-4 px-3 align-top">@if($item['guess_key']) <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-900/50 dark:text-green-200">{{ $allSellableItems->firstWhere('key', $item['guess_key'])['display_name'] ?? 'N/A' }}</span> @else <span class="inline-flex items-center rounded-md bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-800 ring-1 ring-inset ring-yellow-600/20 dark:bg-yellow-900/50 dark:text-yellow-400">No confident match found</span> @endif</td>
-                                <td class="py-4 px-3 align-top"><select wire:model="unmappedItems.{{ $index }}.assigned_key" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-900 dark:border-gray-600 dark:text-white"><option value="">Choose a product...</option>@foreach($allSellableItems as $sellable)<option value="{{ $sellable['key'] }}">{{ $sellable['display_name'] }}</option>@endforeach</select></td>
+                                <td class="py-4 px-3 align-top">
+                                    <select id="product-select-{{ $index }}" wire:model="unmappedItems.{{ $index }}.assigned_key" class="product-tom-select block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+                                        <option value="">Choose a product...</option>
+                                        @foreach($allSellableItems as $sellable)
+                                            <option value="{{ $sellable['key'] }}">{{ $sellable['display_name'] }}</option>
+                                        @endforeach
+                                    </select>
+                                </td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -192,3 +225,30 @@
         @endif
     </div>
 </div>
+
+{{-- Tom Select CDN and initialization --}}
+@push('scripts')
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        document.addEventListener('livewire:load', function () {
+            window.initTomSelect = function() {
+                document.querySelectorAll('.product-tom-select').forEach(function(el) {
+                    if (el.tomselect) {
+                        el.tomselect.destroy();
+                    }
+                    new TomSelect(el, {
+                        create: false,
+                        sortField: {field: 'text', direction: 'asc'},
+                        maxOptions: 1000,
+                        dropdownParent: 'body',
+                    });
+                });
+            };
+            window.initTomSelect();
+            Livewire.hook('message.processed', (message, component) => {
+                window.initTomSelect();
+            });
+        });
+    </script>
+@endpush

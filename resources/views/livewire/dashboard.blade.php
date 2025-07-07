@@ -190,6 +190,30 @@
                 </div>
             </div>
 
+            {{-- Insights & Suggestions --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-indigo-100 dark:border-indigo-900/40 mb-6">
+                <h2 class="text-lg font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-2 mb-2">
+                    <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Insights & Suggestions
+                </h2>
+                <ul class="space-y-2 text-sm">
+                    <li>🔔 <b>{{ $lowStockItemsCount ?? 0 }}</b> items are low on stock. <a
+                            href="{{ route('products.index', ['filter[status]' => 'low_stock']) }}"
+                            class="text-indigo-600 dark:text-indigo-300 underline">Restock now</a>.</li>
+                    <li>📦 <b>{{ $deadStockItemsCount ?? 0 }}</b> dead stock items. Consider <a
+                            href="{{ route('products.index', ['filter[status]' => 'dead_stock']) }}"
+                            class="text-indigo-600 dark:text-indigo-300 underline">promotions</a> to clear them.</li>
+                    <li>💰 Profit margin is <b>{{ number_format($profitMargin ?? 0, 1) }}%</b> (target: <b>{{ number_format($profitMarginTarget ?? 0, 1) }}%</b>).</li>
+                    <li>👥 Repeat customer rate: <b>{{ number_format($repeatCustomerRate ?? 0, 1) }}%</b>. Reward loyal customers!</li>
+                    <li>🎯 You’ve achieved <b>{{ number_format($percentageAchieved ?? 0, 1) }}%</b> of your monthly revenue target.</li>
+                </ul>
+            </div>
+
+
+
             {{-- Main Grid --}}
             <div class="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                 {{-- Main Content Area --}}
@@ -218,7 +242,6 @@
                                     fill="none" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a1.5 1.5 0 100-2.121 1.5 1.5 0 000 2.121zM9 12a3 3 0 116 0 3 3 0 01-6 0z" />
-                                </svg>
                             </x-slot:icon>
                         </x-kpi-card>
                         <x-kpi-card title="Total Purchase Value"
