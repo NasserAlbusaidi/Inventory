@@ -221,6 +221,10 @@ class SalesImport extends Component
                 ]);
             }
         });
+        Activity::create([
+            'type' => 'sales_order_imported',
+            'description' => "Imported {$createdOrderCount} sales orders with {$successCount} items from PDF upload.",
+        ]);
 
         session()->flash('message', "Import complete! Added {$createdOrderCount} new sales orders. Check the sales list for details.");
         return redirect()->route('sales-orders.index');
