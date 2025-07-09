@@ -308,6 +308,18 @@ class ProductList extends Component
                     });
                 });
             }
+            if ($this->statusFilter === 'out_of_stock') {
+                $productsQuery->where(function ($query) {
+                    $query->where(fn($q) => $q->where('has_variants', false)->whereDoesntHave('locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)))
+                        ->orWhere(fn($q) => $q->where('has_variants', true)->whereDoesntHave('variants.locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)));
+                });
+            }
+            if ($this->statusFilter === 'in_stock') {
+                $productsQuery->where(function ($query) {
+                    $query->where(fn($q) => $q->where('has_variants', false)->whereHas('locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)))
+                        ->orWhere(fn($q) => $q->where('has_variants', true)->whereHas('variants.locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)));
+                });
+            }
         }
 
         $products = $productsQuery->orderBy('name')->paginate($this->perPage);

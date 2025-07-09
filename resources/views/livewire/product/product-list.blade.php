@@ -113,6 +113,17 @@
                     </select>
                 </div>
             </div>
+            <div>
+                <label for="statusFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">Status</label>
+                <select id="statusFilter" wire:model.live="statusFilter"
+                        class="form-select block w-full py-2 px-3 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-gray-200">
+                    <option value="">All Products</option>
+                    <option value="in_stock">In Stock</option>
+                    <option value="low_stock">Low Stock</option>
+                    <option value="out_of_stock">Out of Stock</option>
+                    <option value="dead_stock">Dead Stock</option>
+                </select>
+            </div>
             @if ($statusFilter)
                 <div class="mt-4 flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/50 p-3 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500 dark:text-indigo-400"
