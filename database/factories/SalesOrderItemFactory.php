@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
@@ -17,7 +18,7 @@ class SalesOrderItemFactory extends Factory
      *
      * @var string
      */
-    protected $model = SalesOrderItem::class; //
+    protected $model = SalesOrderItem::class;
 
     /**
      * Define the model's default state.
@@ -26,20 +27,19 @@ class SalesOrderItemFactory extends Factory
      */
     public function definition(): array
     {
-        // Ensure ProductVariants with stock exist
-        $productVariant = ProductVariant::where('stock_quantity', '>', 0)->inRandomOrder()->first() ?? ProductVariant::factory()->create(['stock_quantity' => $this->faker->numberBetween(10, 50)]); //
+        $saleable = $this->faker->randomElement([
+            Product::class,
+            ProductVariant::class,
+        ]);
 
-        $quantitySold = 1;
-        if ($productVariant->stock_quantity > 0) {
-            $quantitySold = $this->faker->numberBetween(1, min(5, $productVariant->stock_quantity));
-        }
-
+        $saleableInstance = $saleable::factory()->create();
 
         return [
-            'sales_order_id' => SalesOrder::factory(), // Assumes a SalesOrder will be created or is passed
-            'product_variant_id' => $productVariant->id,
-            'quantity' => $quantitySold,
-            'price_per_unit' => $productVariant->selling_price, // Use the variant's selling price
+            'sales_order_id' => SalesOrder::factory(),
+            'saleable_id' => $saleableInstance->id,
+            'saleable_type' => $saleable,
+            'quantity' => $this->faker->numberBetween(1, 5),
+            'price_per_unit' => $saleableInstance->selling_price,
         ];
     }
 }

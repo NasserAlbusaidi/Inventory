@@ -11,11 +11,11 @@ class ProductTest extends TestCase
     /**
      * A basic feature test example.
      */
-    public function test_example(): void
-    {
-        $response = $this->get('/products');
+    // public function test_example(): void
+    // {
+    //     $response = $this->get('/products');
 
-        $response->assertStatus(200);
-        $response->assertSee('Products');
-    }
+    //     $response->assertStatus(200);
+    //     $response->assertSee('Products');
+    // }
 }

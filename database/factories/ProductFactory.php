@@ -27,6 +27,8 @@ class ProductFactory extends Factory
             'description' => $this->faker->paragraph(),
             'category_id' => $category->id, // Changed from 'category' string
             'image_url' => $this->faker->imageUrl(640, 480, 'perfume', true),
+            'cost_price' => $this->faker->randomFloat(2, 10, 50),
+            'selling_price' => $this->faker->randomFloat(2, 50, 200),
         ];
     }
 }

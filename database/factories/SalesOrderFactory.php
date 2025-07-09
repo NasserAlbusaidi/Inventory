@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\SalesChannel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +19,7 @@ class SalesOrderFactory extends Factory
     {
         return [
             'order_number' => $this->faker->unique()->numerify('SO#####'),
-            'channel' => $this->faker->randomElement(['shopify', 'boutique', 'other']),
+            'sales_channel_id' => SalesChannel::factory(),
             'location_id' => \App\Models\Location::factory(),
             'order_date' => $this->faker->dateTimeBetween('-1 year', 'now'),
             'customer_details' => $this->faker->name(),

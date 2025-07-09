@@ -117,4 +117,67 @@ protected function totalStock(): Attribute
 
 }
 
+    public function canBeDeleted(): array
+    {
+        if ($this->total_stock > 0) {
+            return [false, "This product cannot be deleted because it is still in stock."];
+        }
+
+        $isLinkedToOrders = $this->salesOrderItems()->exists() || $this->purchaseOrderItems()->exists();
+
+        if ($isLinkedToOrders) {
+            return [false, "This product cannot be deleted because it is linked to existing sales or purchase orders."];
+        }
+
+        return [true, null];
+    }
+
+    public function scopeWhereStatus($query, $status)
+    {
+        $lowStockThreshold = app('settings')->get('low_stock_threshold', 5);
+
+        if ($status === 'low_stock') {
+            return $query->where(function ($query) use ($lowStockThreshold) {
+                $query->where(fn($q) => $q->where('has_variants', false)->whereHas('locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)->where('stock_quantity', '<=', $lowStockThreshold)))
+                    ->orWhere(fn($q) => $q->where('has_variants', true)->whereHas('variants.locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)->where('stock_quantity', '<=', $lowStockThreshold)));
+            });
+        }
+
+        if ($status === 'dead_stock') {
+            $deadStockCutoffDate = now()->subDays(90);
+            $soldItems = SalesOrderItem::whereHas('salesOrder', fn($q) => $q->where('created_at', '>=', $deadStockCutoffDate))
+                ->select('saleable_id', 'saleable_type')->distinct()->get();
+            $soldProductIds = $soldItems->where('saleable_type', 'product')->pluck('saleable_id');
+            $soldVariantIds = $soldItems->where('saleable_type', 'variant')->pluck('saleable_id');
+
+            return $query->where(function ($query) use ($soldProductIds, $soldVariantIds) {
+                $query->where(function ($q) use ($soldProductIds) {
+                    $q->where('has_variants', false)
+                        ->whereHas('locationInventories', fn($i) => $i->where('stock_quantity', '>', 0))
+                        ->whereNotIn('id', $soldProductIds);
+                })->orWhere(function ($q) use ($soldVariantIds) {
+                    $q->where('has_variants', true)
+                        ->where(fn($sub) => $sub->whereHas('locationInventories', fn($i) => $i->where('stock_quantity', '>', 0))
+                            ->orWhereHas('variants.locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)))
+                        ->whereDoesntHave('variants', fn($varQ) => $varQ->whereIn('id', $soldVariantIds));
+                });
+            });
+        }
+
+        if ($status === 'out_of_stock') {
+            return $query->where(function ($query) {
+                $query->where(fn($q) => $q->where('has_variants', false)->whereDoesntHave('locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)))
+                    ->orWhere(fn($q) => $q->where('has_variants', true)->whereDoesntHave('variants.locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)));
+            });
+        }
+
+        if ($status === 'in_stock') {
+            return $query->where(function ($query) {
+                $query->where(fn($q) => $q->where('has_variants', false)->whereHas('locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)))
+                    ->orWhere(fn($q) => $q->where('has_variants', true)->whereHas('variants.locationInventories', fn($i) => $i->where('stock_quantity', '>', 0)));
+            });
+        }
+
+        return $query;
+    }
 }
