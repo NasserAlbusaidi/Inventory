@@ -60,8 +60,11 @@ Route::get('/inventory/adjustments/create', StockAdjustmentForm::class)->name('i
 // Purchase Order Management Routes
 Route::get('/purchase-orders', PurchaseOrderList::class)->name('purchase-orders.index');
 Route::get('/purchase-orders/create', PurchaseOrderForm::class)->name('purchase-orders.create');
+Route::get('/purchase-orders/import', App\Livewire\PurchaseOrder\PurchaseUpload::class)->name('purchase-orders.import');
+
 Route::get('/purchase-orders/{purchaseOrder}/edit', PurchaseOrderForm::class)->name('purchase-orders.edit');
 Route::get('/purchase-orders/{purchaseOrder}', PurchaseOrderForm::class)->name('purchase-orders.show');
+
 
 // Sales Order Management Routes
 Route::get('/sales-orders', SalesOrderList::class)->name('sales-orders.index');

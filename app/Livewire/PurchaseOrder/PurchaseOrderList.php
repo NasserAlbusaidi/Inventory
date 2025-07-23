@@ -29,6 +29,7 @@ class PurchaseOrderList extends Component
     {
         $this->allSuppliers = Supplier::all();
         $this->allLocations = Location::all();
+
     }
 
     public function deletePurchaseOrder($purchaseOrderId)
@@ -68,6 +69,7 @@ class PurchaseOrderList extends Component
 
     public function render()
     {
+
 
         $purchaseOrders = PurchaseOrder::with(['supplier', 'items']) // Eager load supplier and items
             ->when($this->search, function ($query) {

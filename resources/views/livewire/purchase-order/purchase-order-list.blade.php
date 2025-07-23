@@ -16,6 +16,16 @@
                 </svg>
                 Create New PO
             </a>
+
+            <a href="{{ route('purchase-orders.import') }}"
+                class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-green-600 border border-transparent rounded-lg font-semibold text-sm text-white uppercase tracking-widest hover:bg-green-700 dark:hover:bg-green-500 shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5 mr-2 -ml-1">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                Upload PO
+            </a>
         </div>
 
         {{-- =================================================== --}}
