@@ -8,26 +8,34 @@ use Exception;
 
 class PurchaseOrderImport implements ToCollection
 {
+    /**
+     * This public property will hold the structured data after parsing is complete.
+     * @var array
+     */
     public array $data;
 
+    /**
+     * This is the main method called by the Excel package.
+     *
+     * @param Collection $rows
+     * @throws Exception
+     */
     public function collection(Collection $rows)
     {
         $headerData = [
             'supplier_name' => null,
             'order_number' => 'PO-' . date('Ymd-His'),
             'order_date' => now()->format('Y-m-d'),
+            'final_total_usd' => 0.0, // To store the true total from the "TOTAL" line
         ];
         $items = [];
         $isItemSection = false;
-
-        // --- NEW: Dynamic column mapping ---
-        // This array will store the actual column index for each header we need.
         $columnMap = [];
 
         foreach ($rows as $row) {
             $rowString = implode(',', $row->toArray());
 
-            // --- Header Data Parsing (This part works well) ---
+            // --- 1. Parse Header & Footer Information ---
             if (str_contains($rowString, 'SILICON2 CO., LTD')) {
                 $headerData['supplier_name'] = 'Silicon2';
             }
@@ -43,15 +51,21 @@ class PurchaseOrderImport implements ToCollection
                     $headerData['order_date'] = $matches[1];
                 }
             }
-
-            // --- Stop processing at the end of the item list ---
-            if (str_contains($rowString, 'Delivery Charge') || str_contains($rowString, 'TOTAL')) {
-                $isItemSection = false;
-                break;
+            if (str_contains($rowString, 'TOTAL') && str_contains($rowString, 'USD')) {
+                foreach ($row as $cell) {
+                    $cleanedCell = str_replace(['"', ','], '', $cell ?? '');
+                    if (is_numeric($cleanedCell)) {
+                        // Continuously overwrite the total. The last number found on the line will be the final value.
+                        $headerData['final_total_usd'] = (float) $cleanedCell;
+                    }
+                }
             }
 
-            // --- DYNAMIC HEADER DETECTION ---
-            // Find the header row and map the column indexes.
+            // --- 2. Control the Item Parsing Section ---
+            if (str_contains($rowString, 'Delivery Charge')) {
+                $isItemSection = false;
+                continue;
+            }
             if (str_contains($rowString, 'DESCRIPTION') && str_contains($rowString, 'Q\'TY')) {
                 foreach ($row as $index => $header) {
                     $header = strtoupper(trim($header ?? ''));
@@ -62,15 +76,12 @@ class PurchaseOrderImport implements ToCollection
                     if ($header === 'AMOUNT') $columnMap['amount'] = $index;
                 }
                 $isItemSection = true;
-                continue; // Skip processing the header row itself as an item
+                continue;
             }
 
-            // --- ITEM PROCESSING USING DYNAMIC MAP ---
+            // --- 3. Process Item Rows using the Dynamic Map ---
             if ($isItemSection && !empty($columnMap)) {
-                // Use .get() with a default to safely access row data
                 $idx = $row->get($columnMap['idx'] ?? -1);
-
-                // Check if it's a valid item row (must have a numeric index)
                 if (is_numeric($idx) && (int)$idx > 0) {
                     $items[] = [
                         'description' => trim($row->get($columnMap['description'] ?? -1) ?? ''),
@@ -82,10 +93,15 @@ class PurchaseOrderImport implements ToCollection
             }
         }
 
+        // --- 4. Final Validation ---
         if (empty($items)) {
             throw new Exception("The importer could not find any valid item rows after the header. Please check the file format.");
         }
+        if ($headerData['final_total_usd'] <= 0) {
+             throw new Exception("The importer could not find the final 'TOTAL' amount in USD. Please check the file format.");
+        }
 
+        // --- 5. Assign the parsed data to the public property ---
         $this->data = [
             'header' => $headerData,
             'items' => $items,
