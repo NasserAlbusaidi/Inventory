@@ -7,6 +7,7 @@
         {{-- =================================================== --}}
         <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">Purchase Orders</h1>
+            <div class="w-full sm:w-auto flex flex-col sm:flex-row items-center gap-3">
             <a href="{{ route('purchase-orders.create') }}"
                 class="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 bg-indigo-600 border border-transparent rounded-lg font-semibold text-sm text-white uppercase tracking-widest hover:bg-indigo-700 dark:hover:bg-indigo-500 shadow-md">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
@@ -26,6 +27,7 @@
                 </svg>
                 Upload PO
             </a>
+            </div>
         </div>
 
         {{-- =================================================== --}}
