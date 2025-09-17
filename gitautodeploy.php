@@ -8,6 +8,7 @@ const EMAIL = "nasserbusaidi@gmail.com";
 const BranchName = "main";
 const GitUrl = "git@github.com:NasserAlbusaidi/Inventory.git";
 */
+// Test commit to trigger deployment
 
 const BranchName = "main";
 const GitUrl = "git@github.com:NasserAlbusaidi/Inventory.git";
