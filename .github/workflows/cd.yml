@@ -14,7 +14,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Deploy to Cloudways
-      uses: cloudways/github-action@v1
+      uses: roelmagdaleno/cloudways-api-git-pull-action@stable
       with:
         cloudways_api_key: ${{ secrets.CLOUDWAYS_API_KEY }}
         cloudways_email: ${{ secrets.CLOUDWAYS_EMAIL }}
