@@ -1,0 +1,24 @@
+name: Deploy to Cloudways
+
+# This action runs on every push to the main branch
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Cloudways
+      uses: cloudways/github-action@v1
+      with:
+        cloudways_api_key: ${{ secrets.CLOUDWAYS_API_KEY }}
+        cloudways_email: ${{ secrets.CLOUDWAYS_EMAIL }}
+        server_id: '1523251' # 👈 Replace with your Server ID
+        app_id: '5862760'   # 👈 Replace with your Application ID
+        git_url: 'git@github.com:NasserAlbusaidi/Inventory.git'
+        branch_name: 'main'
