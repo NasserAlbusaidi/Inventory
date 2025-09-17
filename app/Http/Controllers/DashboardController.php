@@ -129,7 +129,9 @@ class DashboardController extends Controller
             : ($purchaseOrderAmountLast30Days > 0 ? 100 : 0);
 
         // Total Customers, Pending POs, Completed POs for Quick Stats
-        $totalCustomers = SalesOrder::select($rawCustomerIdentifier)->distinct()->count($rawCustomerIdentifier);
+       $totalCustomers = SalesOrder::whereBetween('created_at', [$startDate, $endDate])
+            ->select(DB::raw('count(distinct JSON_UNQUOTE(JSON_EXTRACT(customer_details, "$.name"))) as aggregate'))
+            ->value('aggregate');
         $pendingPOCount = PurchaseOrder::where('status', 'pending')->whereBetween('created_at', [$startDate, $endDate])->count();
         $completedPOCount = PurchaseOrder::where('status', 'completed')->whereBetween('created_at', [$startDate, $endDate])->count();
 
